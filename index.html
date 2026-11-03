@@ -1,9 +1,17 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Comunhão Igreja</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&display=swap">
 <style>
+:root{color-scheme:light}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
 /* Layout: menu lateral por perfil (vira faixa rolável no celular) + área de trabalho em cartões. Vinho litúrgico sobre cinza esverdeado frio. */
 :root{
   --bg:#EFF1F0; --surface:#FFFFFF; --surface-2:#F5F7F6; --ink:#1C2427; --muted:#5A676C; --line:#D8DEDC;
@@ -169,7 +177,8 @@ textarea{resize:vertical;min-height:64px}
   h1{font-size:26px}
 }
 </style>
-
+</head>
+<body>
 <div id="root"></div>
 <div id="modal" class="overlay" hidden></div>
 <div id="toast" role="status" hidden></div>
@@ -737,3 +746,5 @@ document.addEventListener('submit',function(e){
 render();
 })();
 </script>
+</body>
+</html>

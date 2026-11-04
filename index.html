@@ -164,6 +164,20 @@ textarea{resize:vertical;min-height:64px}
 .role select{flex:1 1 150px;max-width:220px}
 .note{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:12.5px}
 .empty{padding:24px 8px;text-align:center;color:var(--muted)}
+.tblwrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;min-width:560px}
+.tbl th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;padding:8px 10px;border-bottom:1px solid var(--line)}
+.tbl td{padding:12px 10px;border-top:1px solid var(--line);vertical-align:top}
+.tbl tr:first-child td{border-top:0}
+.tbl td b{display:block}
+.tbl td span.sub{font-size:12.5px;color:var(--muted)}
+.tbl .ta-r{text-align:right;white-space:nowrap}
+.fset{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0;min-width:0}
+.fset legend{font-size:12.5px;font-weight:700;color:var(--muted);padding:0 6px}
+.checks{display:grid;gap:4px 14px;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));max-height:240px;overflow-y:auto}
+.chk{display:flex;align-items:center;gap:8px;padding:5px 2px;min-width:0;cursor:pointer}
+.chk input{width:auto;flex:none}
+.chk span{min-width:0;overflow-wrap:anywhere}
 @media (max-width:860px){
   .app{grid-template-columns:minmax(0,1fr);gap:14px}
   .side{position:static;padding:12px;gap:10px}
@@ -198,11 +212,11 @@ var FORMAS=['PIX','Dinheiro','Cartão','Transferência','Envelope'];
 var STAFF={secretaria:'Helena Duarte',tesouraria:'Wagner Pinheiro',pastor:'Pastor Eliseu Ramos'};
 var ROLES={
   fiel:{nome:'Membro',nav:['inicio','meu','agenda','presenca','aniversarios']},
-  secretaria:{nome:'Secretaria',nav:['dashboard','membros','visitantes','agenda','presenca','aniversarios']},
+  secretaria:{nome:'Secretaria',nav:['dashboard','membros','funcoes','visitantes','agenda','presenca','aniversarios']},
   tesouraria:{nome:'Tesouraria',nav:['financeiro','patrimonio','dashboard','agenda']},
-  pastor:{nome:'Pastor e liderança',nav:['dashboard','membros','visitantes','agenda','presenca','aniversarios','financeiro','patrimonio']}
+  pastor:{nome:'Pastor e liderança',nav:['dashboard','membros','funcoes','visitantes','agenda','presenca','aniversarios','financeiro','patrimonio']}
 };
-var NAV={inicio:'Início',meu:'Meu cadastro',agenda:'Programação',presenca:'Presença',aniversarios:'Aniversariantes',dashboard:'Painel',membros:'Membros',visitantes:'Visitantes',financeiro:'Financeiro',patrimonio:'Patrimônio'};
+var NAV={inicio:'Início',meu:'Meu cadastro',agenda:'Programação',presenca:'Presença',aniversarios:'Aniversariantes',dashboard:'Painel',membros:'Membros',funcoes:'Funções',visitantes:'Visitantes',financeiro:'Financeiro',patrimonio:'Patrimônio'};
 
 /* ---------- utilidades ---------- */
 function $(s){return document.querySelector(s)}
@@ -315,14 +329,37 @@ function seed(){
     ['Beatriz Andrade','(21) 97741-8890',-16,'Convidada por Fernanda Lima','EBD',false],
     ['Samuel Quintino','(21) 98312-0045',-23,'Convidado por Gabriel Dias','Culto',true]
   ].map(function(a,i){return {id:i+1,nome:a[0],tel:a[1],data:toISO(addDays(T,a[2])),origem:a[3],evento:a[4],retorno:a[5],obs:''}});
-  return {v:1,members:members,events:events,att:att,fin:fin,inv:inv,visitors:visitors,ids:{m:members.length,e:eid,f:fid,i:inv.length,v:visitors.length}};
+  var funcoes=seedFuncoes(members);
+  return {v:2,members:members,funcoes:funcoes,events:events,att:att,fin:fin,inv:inv,visitors:visitors,ids:{m:members.length,e:eid,f:fid,i:inv.length,v:visitors.length,fn:funcoes.length}};
+}
+function seedFuncoes(members){
+  var base=[
+    ['Músico','Toca ou canta no louvor e nos ensaios',true],
+    ['Diácono','Cuida da ordem, da Santa Ceia e do auxílio aos necessitados',true],
+    ['Porteiro','Recebe e orienta quem chega ao templo',true],
+    ['Professor da EBD','Leciona na Escola Bíblica Dominical',true],
+    ['Professor infantil','Leciona e cuida das crianças',true],
+    ['Recepcionista','Acolhe visitantes e novos convertidos',true],
+    ['Operador de som e mídia','Opera som, projeção e transmissão',true],
+    ['Líder de jovens','Coordena as atividades do grupo de jovens',true],
+    ['Intercessor','Participa do círculo de oração',false]
+  ];
+  var list=base.map(function(a,i){return {id:i+1,nome:a[0],descricao:a[1],cooperador:a[2]}});
+  var map={'Louvor':[1],'Diaconia':[2],'Recepção':[],'Ensino':[],'Infantil':[],'Mídia':[7],'Intercessão':[9],'Jovens':[]};
+  members.forEach(function(m){m.funcoes=(map[m.ministerio]||[]).slice()});
+  [[2,[7]],[6,[3]],[3,[8]],[9,[4]],[13,[5]]].forEach(function(x){
+    var m=members.find(function(y){return y.id===x[0]});if(m)x[1].forEach(function(f){if(m.funcoes.indexOf(f)<0)m.funcoes.push(f)});
+  });
+  return list;
 }
 var S=null;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
 if(!S||!S.members||!S.ids)S=seed();
+if(!S.funcoes){S.funcoes=seedFuncoes(S.members);S.ids.fn=S.funcoes.length}
+S.members.forEach(function(m){if(!m.funcoes)m.funcoes=[]});
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
-var ui={user:null,page:'',q:'',fStatus:'',fTipo:'',finMonth:'',finTipo:'',annMonth:new Date().getMonth()+1,evSel:null,patQ:'',patCat:'',tmpFoto:undefined,scanId:null};
+var ui={user:null,page:'',q:'',fFuncao:'',fStatus:'',fTipo:'',finMonth:'',finTipo:'',annMonth:new Date().getMonth()+1,evSel:null,patQ:'',patCat:'',tmpFoto:undefined,scanId:null};
 
 /* ---------- permissões ---------- */
 function role(){return ui.user?ui.user.role:''}
@@ -333,6 +370,11 @@ function canFinView(){return role()==='tesouraria'||role()==='pastor'}
 function me(){return ui.user&&ui.user.mid?S.members.find(function(m){return m.id===ui.user.mid}):null}
 function userName(){return ui.user.role==='fiel'?me().nome:STAFF[ui.user.role]}
 function ev(id){return S.events.find(function(e){return e.id===id})}
+function fnc(id){return S.funcoes.find(function(f){return f.id===id})}
+function isCoop(m){return (m.funcoes||[]).some(function(id){var f=fnc(id);return f&&f.cooperador})}
+function fnChips(m){return (m.funcoes||[]).map(function(id){var f=fnc(id);return f?chip(f.nome,f.cooperador?'acc':''):''}).join('')}
+function fnMatch(m){if(!ui.fFuncao)return true;if(ui.fFuncao==='coop')return isCoop(m);return (m.funcoes||[]).indexOf(+ui.fFuncao)>=0}
+function fnOptions(){return '<option value="">Todas as funções</option><option value="coop"'+(ui.fFuncao==='coop'?' selected':'')+'>Somente cooperadores</option>'+S.funcoes.map(function(f){return '<option value="'+f.id+'"'+(String(ui.fFuncao)===String(f.id)?' selected':'')+'>'+esc(f.nome)+'</option>'}).join('')}
 function mem(id){return S.members.find(function(m){return m.id===id})}
 function byDT(a,b){return (a.data+a.hora).localeCompare(b.data+b.hora)}
 function ava(m,sz){
@@ -390,7 +432,7 @@ function evRow(e,clickable){
 
 /* meu cadastro */
 function memberForm(m,own){
-  m=m||{nome:'',nasc:'',tel:'',email:'',endereco:'',civil:'Solteiro(a)',batismo:'',ministerio:'',status:'Ativo',foto:null};
+  m=m||{nome:'',nasc:'',tel:'',email:'',endereco:'',civil:'Solteiro(a)',batismo:'',ministerio:'',status:'Ativo',foto:null,funcoes:[]};
   var staff=canMembers()&&!own;
   return '<div class="photo-row"><span id="fotoPrev">'+ava(m,72)+'</span><div><label class="btn" for="fotoIn">Escolher foto</label><input id="fotoIn" type="file" accept="image/*" data-photo="1" style="display:none"><p class="small muted" style="margin-top:6px">A foto é recortada em formato quadrado.</p></div></div>'+
   '<div class="formgrid">'+
@@ -399,7 +441,15 @@ function memberForm(m,own){
   '<div class="f wide"><span>Endereço</span><input name="endereco" value="'+esc(m.endereco)+'"></div>'+
   sel('Estado civil','civil',CIVIS,m.civil)+fld('Data do batismo','batismo',m.batismo,'type="date"')+
   sel('Ministério','ministerio',['']. concat(MINISTERIOS),m.ministerio,'Nenhum')+
-  (staff?sel('Situação','status',['Ativo','Inativo','Pendente'],m.status):'')+'</div>';
+  (staff?sel('Situação','status',['Ativo','Inativo','Pendente'],m.status):'')+'</div>'+funcBlock(m,staff,own);
+}
+function funcBlock(m,staff,own){
+  if(staff){
+    return '<fieldset class="fset"><legend>Funções (marque as que este membro exerce)</legend><input type="hidden" name="hasfn" value="1"><div class="checks">'+
+      S.funcoes.map(function(f){return '<label class="chk"><input type="checkbox" name="fn" value="'+f.id+'"'+((m.funcoes||[]).indexOf(f.id)>=0?' checked':'')+'><span>'+esc(f.nome)+(f.cooperador?' '+chip('Cooperador','acc'):'')+'</span></label>'}).join('')+'</div></fieldset>';
+  }
+  if(own&&m.funcoes&&m.funcoes.length)return '<div class="f"><span>Minhas funções na igreja</span><div class="chips">'+fnChips(m)+'</div></div>';
+  return '';
 }
 function fld(l,n,v,a){return '<label class="f"><span>'+l+'</span><input name="'+n+'" value="'+esc(v)+'" '+(a||'')+'></label>'}
 function sel(l,n,opts,v,empty){return '<label class="f"><span>'+l+'</span><select name="'+n+'">'+opts.map(function(o){return '<option value="'+esc(o)+'"'+(o===v?' selected':'')+'>'+esc(o||empty||'')+'</option>'}).join('')+'</select></label>'}
@@ -469,13 +519,27 @@ function presencaGestao(){
 function pMembros(){
   var pend=S.members.filter(function(m){return m.status==='Pendente'}).length;
   return head('Membros',S.members.length+' cadastros'+(pend?' · '+pend+' aguardando confirmação':''),'<button class="btn primary" data-a="newmem">Novo membro</button>')+
-  '<section class="card"><div class="toolbar" style="margin-bottom:8px"><input type="search" id="q" data-q="q" placeholder="Buscar por nome, telefone ou ministério" value="'+esc(ui.q)+'" aria-label="Buscar"><select data-s="fStatus" aria-label="Situação"><option value="">Todas as situações</option>'+['Ativo','Inativo','Pendente'].map(function(s){return '<option'+(ui.fStatus===s?' selected':'')+'>'+s+'</option>'}).join('')+'</select></div><div class="list" id="list">'+membrosList()+'</div></section>';
+  '<section class="card"><div class="toolbar" style="margin-bottom:8px"><input type="search" id="q" data-q="q" placeholder="Buscar por nome, telefone ou ministério" value="'+esc(ui.q)+'" aria-label="Buscar"><select data-s="fStatus" aria-label="Situação"><option value="">Todas as situações</option>'+['Ativo','Inativo','Pendente'].map(function(s){return '<option'+(ui.fStatus===s?' selected':'')+'>'+s+'</option>'}).join('')+'</select><select data-s="fFuncao" aria-label="Função">'+fnOptions()+'</select></div><div class="list" id="list">'+membrosList()+'</div></section>';
 }
 function membrosList(){
   var q=ui.q.toLowerCase();
-  var l=S.members.filter(function(m){return (!ui.fStatus||m.status===ui.fStatus)&&(!q||(m.nome+' '+m.tel+' '+m.ministerio).toLowerCase().indexOf(q)>=0)}).sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')});
+  var l=S.members.filter(function(m){return (!ui.fStatus||m.status===ui.fStatus)&&fnMatch(m)&&(!q||(m.nome+' '+m.tel+' '+m.ministerio).toLowerCase().indexOf(q)>=0)}).sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')});
   if(!l.length)return '<p class="empty">Nenhum membro encontrado.</p>';
-  return l.map(function(m){return '<div class="row click" tabindex="0" role="button" data-a="editmem" data-id="'+m.id+'">'+ava(m,40)+'<div class="grow"><b>'+esc(m.nome)+'</b><span>'+age(m.nasc)+' anos · '+esc(m.ministerio||'Sem ministério')+' · '+esc(m.tel)+'</span></div><div class="end">'+chip(m.status,m.status==='Ativo'?'ok':m.status==='Pendente'?'warn':'')+(m.status==='Pendente'?'<button class="btn sm primary" data-a="approve" data-id="'+m.id+'">Aprovar</button>':'')+'</div></div>'}).join('');
+  return l.map(function(m){return '<div class="row click" tabindex="0" role="button" data-a="editmem" data-id="'+m.id+'">'+ava(m,40)+'<div class="grow"><b>'+esc(m.nome)+'</b><span>'+age(m.nasc)+' anos · '+esc(m.ministerio||'Sem ministério')+' · '+esc(m.tel)+'</span>'+(m.funcoes&&m.funcoes.length?'<div class="chips" style="margin-top:5px">'+fnChips(m)+'</div>':'')+'</div><div class="end">'+chip(m.status,m.status==='Ativo'?'ok':m.status==='Pendente'?'warn':'')+(m.status==='Pendente'?'<button class="btn sm primary" data-a="approve" data-id="'+m.id+'">Aprovar</button>':'')+'</div></div>'}).join('');
+}
+
+/* funções */
+function pFuncoes(){
+  var coops=S.members.filter(function(m){return m.status==='Ativo'&&isCoop(m)});
+  var rows=S.funcoes.slice().sort(function(a,b){return (b.cooperador-a.cooperador)||a.nome.localeCompare(b.nome,'pt-BR')}).map(function(f){
+    var v=S.members.filter(function(m){return (m.funcoes||[]).indexOf(f.id)>=0});
+    var nomes=v.slice(0,3).map(function(m){return esc(m.nome.split(' ')[0])}).join(', ')+(v.length>3?' e mais '+(v.length-3):'');
+    return '<tr><td><b>'+esc(f.nome)+'</b><span class="sub">'+esc(f.descricao||'')+'</span></td><td>'+(f.cooperador?chip('Cooperador','acc'):chip('Membro'))+'</td><td><b class="num">'+v.length+'</b><span class="sub">'+(nomes||'Ninguém vinculado')+'</span></td><td class="ta-r"><button class="btn sm" data-a="editfunc" data-id="'+f.id+'">Editar e vincular</button></td></tr>';
+  }).join('');
+  return head('Funções','Defina as funções da igreja, quais são de cooperadores e quem as exerce.','<button class="btn primary" data-a="newfunc">Nova função</button>')+
+  '<div class="kpis"><div class="kpi"><small>Funções cadastradas</small><b>'+S.funcoes.length+'</b><span>'+S.funcoes.filter(function(f){return f.cooperador}).length+' de cooperadores</span></div><div class="kpi"><small>Cooperadores ativos</small><b>'+coops.length+'</b><span>membros com função de cooperador</span></div></div>'+
+  '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>Função</th><th>Tipo</th><th>Vinculados</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="empty">Nenhuma função cadastrada.</td></tr>')+'</tbody></table></div></section>'+
+  '<section class="card"><div class="card-head"><h3>Cooperadores</h3><span class="muted small">Quem tem ao menos uma função de cooperador</span></div><div class="list">'+(coops.length?coops.sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')}).map(function(m){return '<div class="row">'+ava(m,36)+'<div class="grow"><b>'+esc(m.nome)+'</b><div class="chips" style="margin-top:4px">'+fnChips(m)+'</div></div></div>'}).join(''):'<p class="empty">Nenhum cooperador definido ainda.</p>')+'</div></section>';
 }
 
 /* visitantes */
@@ -523,7 +587,7 @@ function pDashboard(){
   var vis30=S.visitors.filter(function(v){return v.data>=toISO(addDays(new Date(),-30))}).length;
   var aniv=at.filter(function(m){return +m.nasc.slice(5,7)===new Date().getMonth()+1}).length;
   var mk=months(6),cur=mk[0].key,rec=sumFin(cur,'dizimo')+sumFin(cur,'oferta'),des=sumFin(cur,'despesa');
-  var kp='<div class="kpis"><div class="kpi"><small>Membros ativos</small><b>'+at.length+'</b><span>'+S.members.length+' cadastros no total</span></div><div class="kpi"><small>Presença média nos cultos</small><b>'+avg+'</b><span>últimos cultos realizados</span></div><div class="kpi"><small>Visitantes (30 dias)</small><b>'+vis30+'</b><span>'+S.visitors.filter(function(v){return v.retorno}).length+' querem contato</span></div><div class="kpi"><small>Aniversariantes do mês</small><b>'+aniv+'</b><span>'+new Date().toLocaleDateString('pt-BR',{month:'long'})+'</span></div>'+(canFinView()?'<div class="kpi"><small>Saldo do mês</small><b style="color:'+(rec-des>=0?'var(--ok)':'var(--bad)')+'">'+brl(rec-des)+'</b><span>entradas menos despesas</span></div>':'')+'</div>';
+  var kp='<div class="kpis"><div class="kpi"><small>Membros ativos</small><b>'+at.length+'</b><span>'+S.members.length+' cadastros no total</span></div><div class="kpi"><small>Cooperadores</small><b>'+at.filter(isCoop).length+'</b><span>'+S.funcoes.filter(function(f){return f.cooperador}).length+' funções de cooperador</span></div><div class="kpi"><small>Presença média nos cultos</small><b>'+avg+'</b><span>últimos cultos realizados</span></div><div class="kpi"><small>Visitantes (30 dias)</small><b>'+vis30+'</b><span>'+S.visitors.filter(function(v){return v.retorno}).length+' querem contato</span></div><div class="kpi"><small>Aniversariantes do mês</small><b>'+aniv+'</b><span>'+new Date().toLocaleDateString('pt-BR',{month:'long'})+'</span></div>'+(canFinView()?'<div class="kpi"><small>Saldo do mês</small><b style="color:'+(rec-des>=0?'var(--ok)':'var(--bad)')+'">'+brl(rec-des)+'</b><span>entradas menos despesas</span></div>':'')+'</div>';
   var presChart='<div class="cols">'+past.map(function(e,i){return '<div class="col" title="'+esc(e.titulo)+'"><b>'+counts[i]+'</b><div class="bars"><i style="height:'+(counts[i]/mxP*100)+'%"></i></div><span>'+fshort(e.data)+'<br>'+({Culto:'Culto',EBD:'EBD',Ensaio:'Ens.','Reunião':'Reun.',Externo:'Ext.'})[e.tipo]+'</span></div>'}).join('')+'</div>';
   var finChart='';
   if(canFinView()){
@@ -534,7 +598,7 @@ function pDashboard(){
   var prox=S.events.filter(function(e){return e.data>=todayISO()}).sort(byDT).slice(0,4);
   return head('Painel',userName()+' · visão geral da igreja')+kp+
   '<div class="grid"><section class="card"><h3>Presença nos últimos eventos</h3>'+presChart+'</section>'+finChart+
-  '<section class="card"><h3>Membros por faixa etária</h3>'+hbars(faixas)+'</section><section class="card"><h3>Membros por ministério</h3>'+hbars(mins)+'</section>'+
+  '<section class="card"><h3>Membros por faixa etária</h3>'+hbars(faixas)+'</section><section class="card"><h3>Membros por ministério</h3>'+hbars(mins)+'</section>'+'<section class="card"><h3>Membros por função</h3>'+hbars(S.funcoes.map(function(f){return {l:f.nome,v:at.filter(function(m){return (m.funcoes||[]).indexOf(f.id)>=0}).length}}).sort(function(a,b){return b.v-a.v}))+'</section>'+
   '<section class="card"><h3>Próximos eventos</h3><div class="list">'+prox.map(function(e){return evRow(e)}).join('')+'</div></section></div>';
 }
 
@@ -574,7 +638,7 @@ function patList(){
   return l.map(function(i){return '<div class="row'+(canFinEdit()?' click" tabindex="0" role="button" data-a="edititem" data-id="'+i.id+'"':'"')+'><div class="grow"><b>'+esc(i.item)+'</b><span>'+esc(i.codigo)+' · '+esc(i.cat)+' · '+esc(i.local)+' · '+i.qtd+' un.</span></div><div class="end"><span class="amount">'+brl(i.qtd*i.valor)+'</span>'+chip(i.estado,i.estado==='Bom'?'ok':i.estado==='Regular'?'warn':i.estado==='Ruim'?'bad':'')+'</div></div>'}).join('');
 }
 
-var PAGES={inicio:pInicio,meu:pMeu,agenda:pAgenda,presenca:pPresenca,aniversarios:pAniversarios,dashboard:pDashboard,membros:pMembros,visitantes:pVisitantes,financeiro:pFinanceiro,patrimonio:pPatrimonio};
+var PAGES={inicio:pInicio,meu:pMeu,agenda:pAgenda,presenca:pPresenca,aniversarios:pAniversarios,dashboard:pDashboard,membros:pMembros,funcoes:pFuncoes,visitantes:pVisitantes,financeiro:pFinanceiro,patrimonio:pPatrimonio};
 var LISTS={agenda:function(){return agendaList()},membros:function(){return membrosList()},aniversarios:function(){return annList()},financeiro:function(){return finList()},patrimonio:function(){return patList()}};
 
 /* ---------- modais ---------- */
@@ -588,6 +652,18 @@ function modalMem(id){
 function modalRegister(){
   ui.tmpFoto=undefined;
   openModal('<h2>Fazer meu cadastro</h2><p class="muted small">Seu cadastro será confirmado pela secretaria da igreja.</p><form data-f="register" style="display:flex;flex-direction:column;gap:16px">'+memberForm(null,true)+'<div class="formgrid">'+fld('Crie uma senha','senha','','type="password" minlength="6" autocomplete="new-password"')+'</div>'+actions('Enviar cadastro')+'</form>');
+}
+function modalFunc(id){
+  var f=id?fnc(id):{nome:'',descricao:'',cooperador:true};
+  var mems=S.members.slice().sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')});
+  var del=id?'<button class="btn" type="button" data-a="delask">Excluir função</button>':'';
+  openModal('<h2>'+(id?'Editar função':'Nova função')+'</h2><form data-f="funcao" data-id="'+(id||'')+'" style="display:flex;flex-direction:column;gap:16px"><div class="formgrid">'+
+    fld('Nome da função','nome',f.nome,'required placeholder="Ex.: Porteiro"')+
+    '<div class="f wide"><span>Descrição</span><input name="descricao" value="'+esc(f.descricao||'')+'" placeholder="O que essa pessoa faz na igreja"></div>'+
+    '<label class="f wide chk"><input type="checkbox" name="coop"'+(f.cooperador?' checked':'')+'><span><b>É uma função de cooperador</b><br><span class="muted small">Quem tiver esta função passa a aparecer na lista de cooperadores.</span></span></label></div>'+
+    '<fieldset class="fset"><legend>Membros com esta função</legend><div class="checks">'+mems.map(function(m){return '<label class="chk"><input type="checkbox" name="mv" value="'+m.id+'"'+((m.funcoes||[]).indexOf(f.id)>=0&&id?' checked':'')+'><span>'+esc(m.nome)+'</span></label>'}).join('')+'</div></fieldset>'+
+    (id?'<div id="delbox" class="note" hidden><p>Excluir remove esta função de '+S.members.filter(function(m){return (m.funcoes||[]).indexOf(id)>=0}).length+' membro(s). Não dá para desfazer.</p><div class="modal-actions" style="margin-top:8px"><button class="btn sm" type="button" data-a="delfunc" data-id="'+id+'">Confirmar exclusão</button></div></div>':'')+
+    actions('Salvar',del)+'</form>');
 }
 function modalVis(){
   openModal('<h2>Novo visitante</h2><form data-f="visitante" style="display:flex;flex-direction:column;gap:16px"><div class="formgrid">'+fld('Nome','nome','','required')+fld('Telefone / WhatsApp','tel','','inputmode="tel"')+fld('Data da visita','data',todayISO(),'type="date" required')+sel('Participou de','evento',['Culto','EBD','Ensaio','Reunião','Evento externo'],'Culto')+'<div class="f wide"><span>Como conheceu a igreja</span><input name="origem" placeholder="Convite de um membro, passou em frente, redes sociais..."></div><label class="f wide" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" name="retorno" checked style="width:auto"><span>Quer receber contato da igreja</span></label></div>'+actions('Salvar visitante')+'</form>');
@@ -652,9 +728,17 @@ document.addEventListener('click',function(ev_){
     case 'newmem':modalMem();break;
     case 'editmem':if(canMembers())modalMem(id);break;
     case 'newvis':modalVis();break;
+    case 'newfunc':modalFunc();break;
+    case 'editfunc':modalFunc(id);break;
+    case 'delask':var db=$('#delbox');if(db)db.hidden=false;break;
+    case 'delfunc':
+      S.funcoes=S.funcoes.filter(function(x){return x.id!==id});
+      S.members.forEach(function(m){m.funcoes=(m.funcoes||[]).filter(function(x){return x!==id})});
+      if(String(ui.fFuncao)===String(id))ui.fFuncao='';
+      save();closeModal();toast('Função excluída.');render();break;
     case 'tomember':
       var v=S.visitors.find(function(x){return x.id===id});
-      S.members.push({id:nid('m'),nome:v.nome,nasc:'',tel:v.tel,email:'',endereco:'',civil:'Solteiro(a)',batismo:'',ministerio:'',status:'Pendente',foto:null});
+      S.members.push({id:nid('m'),nome:v.nome,nasc:'',tel:v.tel,email:'',endereco:'',civil:'Solteiro(a)',batismo:'',ministerio:'',status:'Pendente',foto:null,funcoes:[]});
       S.visitors=S.visitors.filter(function(x){return x.id!==id});save();toast('Visitante enviado para a lista de membros (pendente).');render();break;
     case 'newev':modalEv();break;
     case 'editev':if(canEvents())modalEv(id);break;
@@ -701,6 +785,8 @@ function readMember(fd,base){
   ['nome','nasc','tel','email','endereco','civil','batismo','ministerio'].forEach(function(k){if(fd.has(k))m[k]=String(fd.get(k)).trim()});
   if(fd.has('status'))m.status=fd.get('status');
   if(ui.tmpFoto!==undefined)m.foto=ui.tmpFoto;
+  if(fd.has('hasfn'))m.funcoes=fd.getAll('fn').map(Number);
+  if(!m.funcoes)m.funcoes=[];
   return m;
 }
 document.addEventListener('submit',function(e){
@@ -713,6 +799,20 @@ document.addEventListener('submit',function(e){
       ui.user={role:'fiel',mid:nm.id};ui.page='inicio';toast('Cadastro enviado. A secretaria vai confirmar.');render();break;
     case 'membro':
       var cur=id?mem(id):null,m2=readMember(fd,cur);if(!cur)S.members.push(m2);save();closeModal();toast('Membro salvo.');render();break;
+    case 'funcao':
+      var nomeF=String(fd.get('nome')).trim();
+      if(S.funcoes.some(function(x){return x.id!==id&&x.nome.toLowerCase()===nomeF.toLowerCase()})){toast('Já existe uma função com esse nome.','bad');return}
+      var fx=id?fnc(id):{id:nid('fn')};
+      fx.nome=nomeF;fx.descricao=String(fd.get('descricao')||'').trim();fx.cooperador=fd.get('coop')==='on';
+      if(!id)S.funcoes.push(fx);
+      var want=fd.getAll('mv').map(Number);
+      S.members.forEach(function(m){
+        if(!m.funcoes)m.funcoes=[];
+        var has=m.funcoes.indexOf(fx.id)>=0,wt=want.indexOf(m.id)>=0;
+        if(wt&&!has)m.funcoes.push(fx.id);
+        if(!wt&&has)m.funcoes=m.funcoes.filter(function(x){return x!==fx.id});
+      });
+      save();closeModal();toast('Função salva.');render();break;
     case 'visitante':
       S.visitors.push({id:nid('v'),nome:fd.get('nome').trim(),tel:fd.get('tel'),data:fd.get('data'),origem:fd.get('origem'),evento:fd.get('evento'),retorno:fd.get('retorno')==='on',obs:''});
       save();closeModal();toast('Visitante registrado.');render();break;

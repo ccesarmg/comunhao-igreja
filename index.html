@@ -170,7 +170,7 @@ textarea{resize:vertical;min-height:64px}
 .tbl td{padding:12px 10px;border-top:1px solid var(--line);vertical-align:top}
 .tbl tr:first-child td{border-top:0}
 .tbl td b{display:block}
-.tbl td span.sub{font-size:12.5px;color:var(--muted)}
+.tbl td span.sub{display:block;font-size:12.5px;color:var(--muted)}
 .tbl .ta-r{text-align:right;white-space:nowrap}
 .fset{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0;min-width:0}
 .fset legend{font-size:12.5px;font-weight:700;color:var(--muted);padding:0 6px}
@@ -178,6 +178,24 @@ textarea{resize:vertical;min-height:64px}
 .chk{display:flex;align-items:center;gap:8px;padding:5px 2px;min-width:0;cursor:pointer}
 .chk input{width:auto;flex:none}
 .chk span{min-width:0;overflow-wrap:anywhere}
+.evcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
+.evhead{width:100%;display:flex;align-items:center;gap:12px;cursor:pointer;min-width:0;flex-wrap:wrap}
+.evhead .grow{flex:1 1 220px;min-width:0}
+.evhead .grow b{display:block;overflow-wrap:anywhere}
+.evhead .grow span{font-size:12.5px;color:var(--muted)}
+.evhead:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:8px}
+.prog{display:flex;flex-direction:column;gap:5px;align-items:flex-end;font-size:12px;color:var(--muted)}
+.prog .track{width:96px;height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--ok)}
+.slots{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));margin-top:14px}
+.slot{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0;background:var(--surface-2)}
+.slot-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.slot-h b{overflow-wrap:anywhere}
+.pp{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px;flex-wrap:wrap}
+.pp .pn{flex:1 1 100px;min-width:0;overflow-wrap:anywhere}
+.pp.vazio{color:var(--muted);font-style:italic;padding:3px 0}
+.slot-a{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;align-items:center}
+.evtools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 @media (max-width:860px){
   .app{grid-template-columns:minmax(0,1fr);gap:14px}
   .side{position:static;padding:12px;gap:10px}
@@ -202,7 +220,7 @@ textarea{resize:vertical;min-height:64px}
 (function(){
 'use strict';
 var KEY='comunhao-proto-v1';
-var TIPOS=['Culto','EBD','Ensaio','Reunião','Externo'];
+var TIPOS=['Culto','Santa Ceia','EBD','Ensaio','Reunião','Externo'];
 var MINISTERIOS=['Louvor','Infantil','Jovens','Diaconia','Recepção','Mídia','Intercessão','Ensino'];
 var CIVIS=['Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)','Criança'];
 var CAT_DESP=['Energia elétrica','Água','Internet','Limpeza','Manutenção','Material da EBD','Som e equipamentos','Ajuda social','Ajuda de custo pastoral','Outras'];
@@ -211,12 +229,12 @@ var ESTADOS=['Bom','Regular','Ruim','Baixado'];
 var FORMAS=['PIX','Dinheiro','Cartão','Transferência','Envelope'];
 var STAFF={secretaria:'Helena Duarte',tesouraria:'Wagner Pinheiro',pastor:'Pastor Eliseu Ramos'};
 var ROLES={
-  fiel:{nome:'Membro',nav:['inicio','meu','agenda','presenca','aniversarios']},
-  secretaria:{nome:'Secretaria',nav:['dashboard','membros','funcoes','visitantes','agenda','presenca','aniversarios']},
+  fiel:{nome:'Membro',nav:['inicio','meu','agenda','escala','presenca','aniversarios']},
+  secretaria:{nome:'Secretaria',nav:['dashboard','membros','funcoes','visitantes','agenda','escala','posicoes','presenca','aniversarios']},
   tesouraria:{nome:'Tesouraria',nav:['financeiro','patrimonio','dashboard','agenda']},
-  pastor:{nome:'Pastor e liderança',nav:['dashboard','membros','funcoes','visitantes','agenda','presenca','aniversarios','financeiro','patrimonio']}
+  pastor:{nome:'Pastor e liderança',nav:['dashboard','membros','funcoes','visitantes','agenda','escala','posicoes','presenca','aniversarios','financeiro','patrimonio']}
 };
-var NAV={inicio:'Início',meu:'Meu cadastro',agenda:'Programação',presenca:'Presença',aniversarios:'Aniversariantes',dashboard:'Painel',membros:'Membros',funcoes:'Funções',visitantes:'Visitantes',financeiro:'Financeiro',patrimonio:'Patrimônio'};
+var NAV={inicio:'Início',meu:'Meu cadastro',agenda:'Programação',presenca:'Presença',aniversarios:'Aniversariantes',dashboard:'Painel',membros:'Membros',funcoes:'Funções',escala:'Escala',posicoes:'Posições da escala',visitantes:'Visitantes',financeiro:'Financeiro',patrimonio:'Patrimônio'};
 
 /* ---------- utilidades ---------- */
 function $(s){return document.querySelector(s)}
@@ -273,7 +291,7 @@ function seed(){
     eid++;var iso=toISO(d);
     events.push({id:eid,titulo:titulo,tipo:tipo,data:iso,hora:hora,local:local||'Templo principal',externo:!!ext,aberto:iso===today&&!ext,codigo:'CG-'+L[(eid*7)%24]+L[(eid*11+3)%24]+(1000+eid*37)});
   }
-  for(var off=-24;off<=30;off++){
+  for(var off=-24;off<=45;off++){
     var d=addDays(T,off),w=d.getDay();
     if(w===0){addEv(d,'EBD','Escola Bíblica Dominical','09:00','Salas de aula');addEv(d,'Culto','Culto de Celebração','18:30')}
     if(w===1)addEv(d,'Reunião','Círculo de Oração','19:30','Salão social');
@@ -355,11 +373,105 @@ function seedFuncoes(members){
 var S=null;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
 if(!S||!S.members||!S.ids)S=seed();
-if(!S.funcoes){S.funcoes=seedFuncoes(S.members);S.ids.fn=S.funcoes.length}
-S.members.forEach(function(m){if(!m.funcoes)m.funcoes=[]});
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+migrate();
+function save(){prune();syncAll();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
-var ui={user:null,page:'',q:'',fFuncao:'',fStatus:'',fTipo:'',finMonth:'',finTipo:'',annMonth:new Date().getMonth()+1,evSel:null,patQ:'',patCat:'',tmpFoto:undefined,scanId:null};
+/* ---------- escala: regras ---------- */
+function seedPosicoes(){
+  var T=TIPOS;
+  var L=[
+    ['Direção',T,1,false,[]],
+    ['Preletor',['Culto','Santa Ceia','Reunião','Externo'],1,false,[]],
+    ['Portaria',['Culto','Santa Ceia','EBD','Reunião'],2,true,[6]],
+    ['Áudio',['Culto','Santa Ceia','Ensaio','Externo'],1,true,[8]],
+    ['Mídia',['Culto','Santa Ceia'],1,false,[]],
+    ['Teclado',['Culto','Santa Ceia','Ensaio'],1,true,[12]],
+    ['Guitarra',['Culto','Santa Ceia','Ensaio'],1,false,[]],
+    ['Baixo',['Culto','Santa Ceia','Ensaio'],1,false,[]],
+    ['Bateria',['Culto','Santa Ceia','Ensaio'],1,false,[]],
+    ['Vocal',['Culto','Santa Ceia','Ensaio'],3,false,[]],
+    ['Ofertas',['Culto','Santa Ceia'],2,false,[]],
+    ['Cantina',['Culto'],2,false,[]],
+    ['Professor',['EBD'],4,false,[]],
+    ['Arrumar mesa da Ceia',['Santa Ceia'],2,false,[]],
+    ['Servir a Ceia',['Santa Ceia'],4,false,[]],
+    ['Entregar a Ceia',['Santa Ceia'],4,false,[]],
+    ['Transporte',['Externo'],2,false,[]]
+  ];
+  return L.map(function(a,i){return {id:i+1,nome:a[0],tipos:a[1].slice(),vagas:a[2],recorrente:a[3],titulares:a[4].slice()}});
+}
+function migrate(){
+  if(!S.funcoes){S.funcoes=seedFuncoes(S.members);S.ids.fn=S.funcoes.length}
+  S.members.forEach(function(m){if(!m.funcoes)m.funcoes=[]});
+  if(!S.posicoes){
+    S.events.forEach(function(e){var d=D(e.data);if(e.tipo==='Culto'&&e.titulo==='Culto de Celebração'&&d.getDay()===0&&d.getDate()<=7){e.tipo='Santa Ceia';e.titulo='Culto de Santa Ceia'}});
+    S.posicoes=seedPosicoes();S.ids.pos=S.posicoes.length;S.ids.sl=0;
+    syncAll();seedEscala();
+  }
+}
+function okCoop(id){var m=mem(id);return !!m&&m.status==='Ativo'&&isCoop(m)}
+function prune(){
+  if(!S.posicoes)return;
+  var t=todayISO();
+  S.posicoes.forEach(function(p){p.titulares=p.titulares.filter(okCoop)});
+  S.events.forEach(function(e){if(e.data<t||!e.escala)return;e.escala.slots.forEach(function(s){s.itens=s.itens.filter(function(i){return okCoop(i.m)})})});
+}
+function inEvent(e,mid){return !!e.escala&&e.escala.slots.some(function(s){return s.itens.some(function(i){return i.m===mid})})}
+function slotOf(e,sid){return e.escala.slots.find(function(x){return x.id===sid})}
+function evSlotInfo(e){var tot=0,fill=0;((e.escala&&e.escala.slots)||[]).forEach(function(s){tot+=s.vagas;fill+=Math.min(s.itens.length,s.vagas)});return {tot:tot,fill:fill}}
+function abreEm(e){return toISO(addDays(D(e.data),-30))}
+function escalaAberta(e){var t=todayISO();return t>=abreEm(e)&&t<=e.data}
+function addItem(e,s,mid,origem){
+  var m=mem(mid);
+  if(!m||m.status!=='Ativo'||!isCoop(m))return 'Somente cooperadores podem entrar na escala.';
+  var other=e.escala.slots.find(function(x){return x.itens.some(function(i){return i.m===mid})});
+  if(other)return m.nome.split(' ')[0]+' já está escalado(a) neste evento em '+other.nome+'.';
+  if(s.itens.length>=s.vagas)return 'Esta posição já está completa.';
+  s.itens.push({m:mid,origem:origem});
+  s.ausentes=(s.ausentes||[]).filter(function(x){return x!==mid});
+  return '';
+}
+function syncAll(){
+  if(!S.posicoes)return;
+  var t=todayISO();
+  S.events.forEach(function(e){
+    if(e.data<t)return;
+    var es=e.escala||(e.escala={slots:[],omit:[]});
+    if(!es.omit)es.omit=[];
+    var wanted=S.posicoes.filter(function(p){return p.tipos.indexOf(e.tipo)>=0&&es.omit.indexOf(p.id)<0});
+    es.slots=es.slots.filter(function(sl){return !sl.pid||wanted.some(function(p){return p.id===sl.pid})});
+    wanted.forEach(function(p){
+      var sl=es.slots.find(function(x){return x.pid===p.id});
+      if(!sl){sl={id:nid('sl'),pid:p.id,nome:p.nome,vagas:p.vagas,itens:[],ausentes:[]};es.slots.push(sl)}
+      sl.nome=p.nome;sl.vagas=p.vagas;if(!sl.ausentes)sl.ausentes=[];
+      sl.itens=sl.itens.filter(function(i){return i.origem!=='fixo'||(p.recorrente&&p.titulares.indexOf(i.m)>=0)});
+    });
+    wanted.forEach(function(p){
+      if(!p.recorrente)return;
+      var sl=es.slots.find(function(x){return x.pid===p.id});
+      p.titulares.forEach(function(mid){
+        if(sl.ausentes.indexOf(mid)>=0||inEvent(e,mid)||sl.itens.length>=sl.vagas)return;
+        sl.itens.push({m:mid,origem:'fixo'});
+      });
+    });
+    function ord(x){if(!x.pid)return 9999+x.id;var i=S.posicoes.findIndex(function(p){return p.id===x.pid});return i<0?9998:i}
+    es.slots.sort(function(a,b){return ord(a)-ord(b)});
+  });
+}
+function seedEscala(){
+  var t=todayISO();
+  S.events.forEach(function(e){
+    if(e.data<t||!e.escala)return;
+    function put(nome,mid,o){var sl=e.escala.slots.find(function(x){return x.nome===nome});if(sl)addItem(e,sl,mid,o)}
+    var near=e.data<=toISO(addDays(new Date(),30));
+    if(e.tipo==='Culto'||e.tipo==='Santa Ceia'){put('Direção',4,'lider');put('Ofertas',14,near?'voluntario':'lider')}
+    if(e.tipo==='Santa Ceia'){put('Arrumar mesa da Ceia',13,'lider');put('Servir a Ceia',9,'lider')}
+    if(e.tipo==='EBD')put('Professor',9,'lider');
+    if(e.tipo==='Ensaio')put('Bateria',2,'lider');
+  });
+}
+
+var ui={user:null,page:'',q:'',fFuncao:'',eTipo:'',escOpen:0,fStatus:'',fTipo:'',finMonth:'',finTipo:'',annMonth:new Date().getMonth()+1,evSel:null,patQ:'',patCat:'',tmpFoto:undefined,scanId:null};
 
 /* ---------- permissões ---------- */
 function role(){return ui.user?ui.user.role:''}
@@ -423,11 +535,11 @@ function pInicio(){
   return head('Início','')+hero+
   '<div class="grid"><section class="card"><h3>Próximos eventos</h3><div class="list">'+prox.map(evRow).join('')+'</div></section>'+
   '<section class="card"><div class="card-head"><h3>Aniversariantes de '+new Date().toLocaleDateString('pt-BR',{month:'long'})+'</h3></div><div class="list">'+(mes.length?mes.map(function(x){var hoje=+x.nasc.slice(8)===new Date().getDate();return '<div class="row">'+ava(x,34)+'<div class="grow"><b>'+esc(x.nome)+'</b></div><div class="end">'+(hoje?chip('Hoje','acc'):'<span class="muted num">dia '+x.nasc.slice(8)+'</span>')+'</div></div>'}).join(''):'<p class="empty">Sem aniversariantes neste mês.</p>')+'</div></section>'+
-  '<section class="card"><h3>Minha participação</h3><div class="kpis" style="grid-template-columns:1fr"><div class="kpi"><small>Presenças nos últimos 30 dias</small><b>'+done+'</b><span>Obrigado por estar presente.</span></div></div></section></div>';
+  minhaEscalaCard(m)+'<section class="card"><h3>Minha participação</h3><div class="kpis" style="grid-template-columns:1fr"><div class="kpi"><small>Presenças nos últimos 30 dias</small><b>'+done+'</b><span>Obrigado por estar presente.</span></div></div></section></div>';
 }
 function evRow(e,clickable){
   var d=D(e.data);
-  return '<div class="row'+(clickable?' click':'')+'"'+(clickable?' tabindex="0" role="button" data-a="editev" data-id="'+e.id+'"':'')+'><div class="datebox"><b>'+pad(d.getDate())+'</b><span>'+d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')+'</span></div><div class="grow"><b>'+esc(e.titulo)+'</b><span>'+wd(e.data)+', '+e.hora+' · '+esc(e.local)+'</span></div><div class="end">'+chip(e.tipo,e.tipo==='Culto'?'acc':e.tipo==='EBD'?'teal':e.tipo==='Externo'?'warn':'')+(e.aberto?chip('Presença aberta','ok'):'')+'</div></div>';
+  return '<div class="row'+(clickable?' click':'')+'"'+(clickable?' tabindex="0" role="button" data-a="editev" data-id="'+e.id+'"':'')+'><div class="datebox"><b>'+pad(d.getDate())+'</b><span>'+d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')+'</span></div><div class="grow"><b>'+esc(e.titulo)+'</b><span>'+wd(e.data)+', '+e.hora+' · '+esc(e.local)+'</span></div><div class="end">'+chip(e.tipo,(e.tipo==='Culto'||e.tipo==='Santa Ceia')?'acc':e.tipo==='EBD'?'teal':e.tipo==='Externo'?'warn':'')+(e.aberto?chip('Presença aberta','ok'):'')+'</div></div>';
 }
 
 /* meu cadastro */
@@ -542,6 +654,77 @@ function pFuncoes(){
   '<section class="card"><div class="card-head"><h3>Cooperadores</h3><span class="muted small">Quem tem ao menos uma função de cooperador</span></div><div class="list">'+(coops.length?coops.sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')}).map(function(m){return '<div class="row">'+ava(m,36)+'<div class="grow"><b>'+esc(m.nome)+'</b><div class="chips" style="margin-top:4px">'+fnChips(m)+'</div></div></div>'}).join(''):'<p class="empty">Nenhum cooperador definido ainda.</p>')+'</div></section>';
 }
 
+/* escala */
+function minhaEscalaCard(m){
+  if(!m)return '';
+  var t=todayISO(),coop=m.status==='Ativo'&&isCoop(m),mine=[];
+  S.events.forEach(function(e){
+    if(e.data<t||!e.escala)return;
+    var sl=e.escala.slots.find(function(x){return x.itens.some(function(i){return i.m===m.id})});
+    if(sl)mine.push({e:e,s:sl});
+  });
+  mine.sort(function(a,b){return byDT(a.e,b.e)});
+  if(!coop&&!mine.length)return '';
+  var abertas=coop?S.events.filter(function(e){if(e.data<t||!e.escala||!escalaAberta(e)||inEvent(e,m.id))return false;var i=evSlotInfo(e);return i.fill<i.tot}).length:0;
+  return '<section class="card"><div class="card-head"><h3>Minha escala</h3></div><div class="list">'+
+    (mine.length?mine.slice(0,4).map(function(x){var d=D(x.e.data);return '<div class="row"><div class="datebox"><b>'+pad(d.getDate())+'</b><span>'+d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')+'</span></div><div class="grow"><b>'+esc(x.s.nome)+'</b><span>'+esc(x.e.titulo)+', '+x.e.hora+'</span></div></div>'}).join(''):'<p class="empty">Você ainda não está em nenhuma escala.</p>')+
+    '</div>'+(coop?'<p style="margin-top:10px"><button class="btn primary sm" data-a="nav" data-p="escala">'+(abertas?abertas+' evento(s) com vagas. Quero servir':'Ver escalas')+'</button></p>':'')+'</section>';
+}
+function slotHtml(e,s,m,lead,coop,ab){
+  var n=s.itens.length,full=n>=s.vagas,inEv=m?inEvent(e,m.id):false;
+  var people=s.itens.map(function(i){
+    var pm=mem(i.m);if(!pm)return '';
+    var mine=!!m&&i.m===m.id;
+    var canRm=lead||(mine&&i.origem!=='fixo');
+    return '<div class="pp">'+ava(pm,26)+'<span class="pn">'+esc(pm.nome)+(mine?' (você)':'')+'</span>'+(i.origem==='fixo'?chip('Fixo','teal'):i.origem==='voluntario'?chip('Voluntário'):'')+
+      (canRm?'<button class="btn sm ghost" data-a="rmitem" data-id="'+e.id+'" data-s="'+s.id+'" data-m="'+i.m+'" aria-label="'+(mine?'Sair da escala':'Remover '+esc(pm.nome))+'">'+(mine?'Sair':'Remover')+'</button>':'')+'</div>';
+  }).join('');
+  var vazios='';for(var k=n;k<Math.min(s.vagas,8);k++)vazios+='<div class="pp vazio">Vaga aberta</div>';
+  var act='';
+  if(m&&coop&&!inEv&&!full){act+=ab?'<button class="btn primary sm" data-a="volunt" data-id="'+e.id+'" data-s="'+s.id+'">Quero servir</button>':'<span class="small muted">Abre em '+fshort(abreEm(e))+'</span>'}
+  if(lead)act+='<button class="btn sm" data-a="assign" data-id="'+e.id+'" data-s="'+s.id+'">'+(full?'Gerenciar':'Escalar')+'</button>';
+  return '<div class="slot"><div class="slot-h"><b>'+esc(s.nome)+'</b>'+chip(n+'/'+s.vagas,n>=s.vagas?'ok':n===0?'warn':'')+'</div>'+people+vazios+(act?'<div class="slot-a">'+act+'</div>':'')+'</div>';
+}
+function escCard(e,m,lead,coop){
+  var inf=evSlotInfo(e),ab=escalaAberta(e),open=ui.escOpen===e.id,d=D(e.data);
+  var pct=inf.tot?Math.round(inf.fill/inf.tot*100):0;
+  var h='<section class="evcard"><div class="evhead" role="button" tabindex="0" data-a="escopen" data-id="'+e.id+'" aria-expanded="'+open+'">'+
+    '<div class="datebox"><b>'+pad(d.getDate())+'</b><span>'+d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')+'</span></div>'+
+    '<div class="grow"><b>'+esc(e.titulo)+'</b><span>'+wd(e.data)+', '+e.hora+' · '+esc(e.local)+'</span></div>'+
+    '<div class="chips">'+chip(e.tipo,(e.tipo==='Culto'||e.tipo==='Santa Ceia')?'acc':e.tipo==='EBD'?'teal':e.tipo==='Externo'?'warn':'')+(ab?chip('Escala aberta','ok'):chip('Abre em '+fshort(abreEm(e)),'warn'))+'</div>'+
+    '<div class="prog"><span class="num">'+inf.fill+' de '+inf.tot+' vagas</span><div class="track"><i style="width:'+pct+'%"></i></div></div></div>';
+  if(open){
+    if(!ab)h+='<p class="note" style="margin-top:12px">A escala deste evento abre em '+fdate(abreEm(e))+', 30 dias antes. Até lá, só a liderança pode escalar.</p>';
+    h+='<div class="slots">'+e.escala.slots.map(function(s){return slotHtml(e,s,m,lead,coop,ab)}).join('')+'</div>';
+    if(!e.escala.slots.length)h+='<p class="empty">Este tipo de evento ainda não tem posições. Cadastre em Posições da escala.</p>';
+    if(lead)h+='<div class="evtools"><button class="btn sm" data-a="addslot" data-id="'+e.id+'">Adicionar posição só neste evento</button>'+(e.escala.omit&&e.escala.omit.length?'<button class="btn sm ghost" data-a="restslot" data-id="'+e.id+'">Restaurar posições removidas</button>':'')+'</div>';
+  }
+  return h+'</section>';
+}
+function pEscala(){
+  var m=me(),lead=canMembers(),coop=!!m&&m.status==='Ativo'&&isCoop(m);
+  var t=todayISO(),end=toISO(addDays(new Date(),60));
+  var all=S.events.filter(function(e){return e.data>=t&&e.data<=end&&e.escala}).sort(byDT);
+  var list=all.filter(function(e){return !ui.eTipo||e.tipo===ui.eTipo});
+  if(!list.some(function(e){return e.id===ui.escOpen}))ui.escOpen=list.length?list[0].id:0;
+  var chips=['Todos'].concat(TIPOS).map(function(x){var v=x==='Todos'?'':x;return '<button class="chipbtn" aria-pressed="'+(ui.eTipo===v)+'" data-a="etipo" data-v="'+v+'">'+x+'</button>'}).join('');
+  var nota='';
+  if(m&&!coop)nota='<p class="note">Somente cooperadores participam da escala. Se você quer servir, fale com a secretaria para receber uma função de cooperador.</p>';
+  else if(coop)nota='<p class="note" style="background:var(--teal-soft);color:var(--teal)">Abra um evento e toque em Quero servir na posição que você pode ocupar. A escala abre 30 dias antes de cada evento.</p>';
+  return head('Escala','Quem serve em cada culto, ensaio e evento. Apenas cooperadores entram na escala.')+nota+
+    '<div class="chips">'+chips+'</div>'+
+    (list.length?list.map(function(e){return escCard(e,m,lead,coop)}).join(''):'<section class="card"><p class="empty">Nenhum evento nos próximos 60 dias para este filtro.</p></section>');
+}
+function pPosicoes(){
+  var rows=S.posicoes.map(function(p){
+    var tit=p.titulares.map(function(id){var x=mem(id);return x?esc(x.nome.split(' ')[0]):''}).join(', ');
+    return '<tr><td><b>'+esc(p.nome)+'</b></td><td><div class="chips">'+p.tipos.map(function(x){return chip(x,x==='Santa Ceia'?'acc':'')}).join('')+'</div></td><td class="num">'+p.vagas+'</td><td>'+(p.recorrente?chip('Recorrente','teal')+'<span class="sub">'+(tit?'Titulares: '+tit:'Sem titulares definidos')+'</span>':chip('Escolhida a cada evento'))+'</td><td class="ta-r"><button class="btn sm" data-a="editpos" data-id="'+p.id+'">Editar</button></td></tr>';
+  }).join('');
+  return head('Posições da escala','Defina as posições de cada tipo de evento e quais são recorrentes.','<button class="btn primary" data-a="newpos">Nova posição</button>')+
+    '<p class="note" style="background:var(--teal-soft);color:var(--teal)">Posição recorrente: os titulares entram sozinhos na escala de todos os próximos eventos daquele tipo. Você ainda pode tirar alguém de um evento específico. As demais posições são preenchidas por voluntários ou pela liderança em cada evento.</p>'+
+    '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>Posição</th><th>Eventos</th><th>Vagas</th><th>Recorrência</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="empty">Nenhuma posição cadastrada.</td></tr>')+'</tbody></table></div></section>';
+}
+
 /* visitantes */
 function pVisitantes(){
   return head('Visitantes','Registre quem nos visitou e acompanhe o retorno.','<button class="btn primary" data-a="newvis">Novo visitante</button>')+
@@ -588,7 +771,7 @@ function pDashboard(){
   var aniv=at.filter(function(m){return +m.nasc.slice(5,7)===new Date().getMonth()+1}).length;
   var mk=months(6),cur=mk[0].key,rec=sumFin(cur,'dizimo')+sumFin(cur,'oferta'),des=sumFin(cur,'despesa');
   var kp='<div class="kpis"><div class="kpi"><small>Membros ativos</small><b>'+at.length+'</b><span>'+S.members.length+' cadastros no total</span></div><div class="kpi"><small>Cooperadores</small><b>'+at.filter(isCoop).length+'</b><span>'+S.funcoes.filter(function(f){return f.cooperador}).length+' funções de cooperador</span></div><div class="kpi"><small>Presença média nos cultos</small><b>'+avg+'</b><span>últimos cultos realizados</span></div><div class="kpi"><small>Visitantes (30 dias)</small><b>'+vis30+'</b><span>'+S.visitors.filter(function(v){return v.retorno}).length+' querem contato</span></div><div class="kpi"><small>Aniversariantes do mês</small><b>'+aniv+'</b><span>'+new Date().toLocaleDateString('pt-BR',{month:'long'})+'</span></div>'+(canFinView()?'<div class="kpi"><small>Saldo do mês</small><b style="color:'+(rec-des>=0?'var(--ok)':'var(--bad)')+'">'+brl(rec-des)+'</b><span>entradas menos despesas</span></div>':'')+'</div>';
-  var presChart='<div class="cols">'+past.map(function(e,i){return '<div class="col" title="'+esc(e.titulo)+'"><b>'+counts[i]+'</b><div class="bars"><i style="height:'+(counts[i]/mxP*100)+'%"></i></div><span>'+fshort(e.data)+'<br>'+({Culto:'Culto',EBD:'EBD',Ensaio:'Ens.','Reunião':'Reun.',Externo:'Ext.'})[e.tipo]+'</span></div>'}).join('')+'</div>';
+  var presChart='<div class="cols">'+past.map(function(e,i){return '<div class="col" title="'+esc(e.titulo)+'"><b>'+counts[i]+'</b><div class="bars"><i style="height:'+(counts[i]/mxP*100)+'%"></i></div><span>'+fshort(e.data)+'<br>'+({Culto:'Culto','Santa Ceia':'Ceia',EBD:'EBD',Ensaio:'Ens.','Reunião':'Reun.',Externo:'Ext.'})[e.tipo]+'</span></div>'}).join('')+'</div>';
   var finChart='';
   if(canFinView()){
     var rows=mk.slice().reverse().map(function(m){return {m:m,r:sumFin(m.key,'dizimo')+sumFin(m.key,'oferta'),d:sumFin(m.key,'despesa')}});
@@ -638,7 +821,7 @@ function patList(){
   return l.map(function(i){return '<div class="row'+(canFinEdit()?' click" tabindex="0" role="button" data-a="edititem" data-id="'+i.id+'"':'"')+'><div class="grow"><b>'+esc(i.item)+'</b><span>'+esc(i.codigo)+' · '+esc(i.cat)+' · '+esc(i.local)+' · '+i.qtd+' un.</span></div><div class="end"><span class="amount">'+brl(i.qtd*i.valor)+'</span>'+chip(i.estado,i.estado==='Bom'?'ok':i.estado==='Regular'?'warn':i.estado==='Ruim'?'bad':'')+'</div></div>'}).join('');
 }
 
-var PAGES={inicio:pInicio,meu:pMeu,agenda:pAgenda,presenca:pPresenca,aniversarios:pAniversarios,dashboard:pDashboard,membros:pMembros,funcoes:pFuncoes,visitantes:pVisitantes,financeiro:pFinanceiro,patrimonio:pPatrimonio};
+var PAGES={escala:pEscala,posicoes:pPosicoes,inicio:pInicio,meu:pMeu,agenda:pAgenda,presenca:pPresenca,aniversarios:pAniversarios,dashboard:pDashboard,membros:pMembros,funcoes:pFuncoes,visitantes:pVisitantes,financeiro:pFinanceiro,patrimonio:pPatrimonio};
 var LISTS={agenda:function(){return agendaList()},membros:function(){return membrosList()},aniversarios:function(){return annList()},financeiro:function(){return finList()},patrimonio:function(){return patList()}};
 
 /* ---------- modais ---------- */
@@ -663,6 +846,31 @@ function modalFunc(id){
     '<label class="f wide chk"><input type="checkbox" name="coop"'+(f.cooperador?' checked':'')+'><span><b>É uma função de cooperador</b><br><span class="muted small">Quem tiver esta função passa a aparecer na lista de cooperadores.</span></span></label></div>'+
     '<fieldset class="fset"><legend>Membros com esta função</legend><div class="checks">'+mems.map(function(m){return '<label class="chk"><input type="checkbox" name="mv" value="'+m.id+'"'+((m.funcoes||[]).indexOf(f.id)>=0&&id?' checked':'')+'><span>'+esc(m.nome)+'</span></label>'}).join('')+'</div></fieldset>'+
     (id?'<div id="delbox" class="note" hidden><p>Excluir remove esta função de '+S.members.filter(function(m){return (m.funcoes||[]).indexOf(id)>=0}).length+' membro(s). Não dá para desfazer.</p><div class="modal-actions" style="margin-top:8px"><button class="btn sm" type="button" data-a="delfunc" data-id="'+id+'">Confirmar exclusão</button></div></div>':'')+
+    actions('Salvar',del)+'</form>');
+}
+function modalAssign(eid,sid){
+  var e=ev(eid),s=slotOf(e,sid);
+  var elig=S.members.filter(function(x){return x.status==='Ativo'&&isCoop(x)&&!inEvent(e,x.id)}).sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')});
+  var full=s.itens.length>=s.vagas;
+  openModal('<h2>Escalar em '+esc(s.nome)+'</h2><p class="muted small">'+esc(e.titulo)+', '+fdate(e.data)+' às '+e.hora+'. Aparecem só cooperadores que ainda não estão neste evento.</p>'+
+    '<form data-f="assign" data-id="'+eid+'" data-s="'+sid+'" style="display:flex;flex-direction:column;gap:16px">'+
+    (full?'<p class="note">Esta posição já está completa. Remova alguém para escalar outra pessoa.</p>':elig.length?'<label class="f"><span>Cooperador</span><select name="mid">'+elig.map(function(x){return '<option value="'+x.id+'">'+esc(x.nome)+(x.funcoes&&x.funcoes.length?' ('+x.funcoes.map(function(f){return fnc(f)?fnc(f).nome:''}).filter(Boolean).join(', ')+')':'')+'</option>'}).join('')+'</select></label>':'<p class="note">Todos os cooperadores ativos já estão neste evento.</p>')+
+    '<div class="modal-actions"><button class="btn" type="button" data-a="close">Fechar</button><button class="btn" type="button" data-a="rmslot" data-id="'+eid+'" data-s="'+sid+'">Remover posição do evento</button>'+(!full&&elig.length?'<button class="btn primary" type="submit">Escalar</button>':'')+'</div></form>');
+}
+function modalAddSlot(eid){
+  var e=ev(eid);
+  openModal('<h2>Nova posição neste evento</h2><p class="muted small">Vale só para '+esc(e.titulo)+', '+fdate(e.data)+'. Para criar uma posição permanente, use Posições da escala.</p><form data-f="addslot" data-id="'+eid+'" style="display:flex;flex-direction:column;gap:16px"><div class="formgrid">'+fld('Nome da posição','nome','','required placeholder="Ex.: Recepção de convidados"')+fld('Vagas','vagas','1','type="number" min="1" max="20" required')+'</div>'+actions('Adicionar')+'</form>');
+}
+function modalPos(id){
+  var p=id?S.posicoes.find(function(x){return x.id===id}):{nome:'',tipos:['Culto'],vagas:1,recorrente:false,titulares:[]};
+  var coops=S.members.filter(function(x){return x.status==='Ativo'&&isCoop(x)}).sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')});
+  var del=id?'<button class="btn" type="button" data-a="delask">Excluir posição</button>':'';
+  openModal('<h2>'+(id?'Editar posição':'Nova posição')+'</h2><form data-f="posicao" data-id="'+(id||'')+'" style="display:flex;flex-direction:column;gap:16px"><div class="formgrid">'+
+    fld('Nome da posição','nome',p.nome,'required placeholder="Ex.: Bateria, Servir a Ceia"')+fld('Vagas por evento','vagas',p.vagas,'type="number" min="1" max="20" required')+'</div>'+
+    '<fieldset class="fset"><legend>Existe nestes tipos de evento</legend><div class="checks">'+TIPOS.map(function(t){return '<label class="chk"><input type="checkbox" name="tp" value="'+esc(t)+'"'+(p.tipos.indexOf(t)>=0?' checked':'')+'><span>'+esc(t)+'</span></label>'}).join('')+'</div></fieldset>'+
+    '<label class="chk"><input type="checkbox" name="rec"'+(p.recorrente?' checked':'')+'><span><b>Posição recorrente</b><br><span class="muted small">Os titulares abaixo entram sozinhos na escala de todos os próximos eventos desses tipos.</span></span></label>'+
+    '<fieldset class="fset"><legend>Titulares (só vale se for recorrente)</legend>'+(coops.length?'<div class="checks">'+coops.map(function(x){return '<label class="chk"><input type="checkbox" name="ti" value="'+x.id+'"'+(p.titulares.indexOf(x.id)>=0?' checked':'')+'><span>'+esc(x.nome)+'</span></label>'}).join('')+'</div>':'<p class="muted small">Nenhum cooperador ativo. Vincule funções de cooperador aos membros primeiro.</p>')+'</fieldset>'+
+    (id?'<div id="delbox" class="note" hidden><p>Excluir remove esta posição da escala dos próximos eventos. Eventos passados não mudam.</p><div class="modal-actions" style="margin-top:8px"><button class="btn sm" type="button" data-a="delpos" data-id="'+id+'">Confirmar exclusão</button></div></div>':'')+
     actions('Salvar',del)+'</form>');
 }
 function modalVis(){
@@ -701,6 +909,8 @@ function checkin(eid,mid,via){
 }
 function render(){
   $('#root').innerHTML=ui.user?shell():loginView();
+  var nv=document.querySelector('.nav'),nc=nv&&nv.querySelector('[aria-current]');
+  if(nv&&nc&&nv.scrollWidth>nv.clientWidth)nv.scrollLeft=nc.offsetLeft-(nv.clientWidth-nc.offsetWidth)/2;
   var q=$('#qr');
   if(q&&ui.evSel){
     var e=ev(ui.evSel),txt='comunhao://presenca/'+e.codigo;
@@ -719,7 +929,7 @@ document.addEventListener('click',function(ev_){
     case 'login':
       var r=el.dataset.role;ui.user={role:r,mid:r==='fiel'?+$('#loginMember').value:null};ui.page='';ui.evSel=null;render();break;
     case 'logout':ui.user=null;render();break;
-    case 'reset':S=seed();save();ui.evSel=null;toast('Dados de exemplo restaurados.');render();break;
+    case 'reset':S=seed();migrate();save();ui.evSel=null;toast('Dados de exemplo restaurados.');render();break;
     case 'register':modalRegister();break;
     case 'nav':go(el.dataset.p);break;
     case 'close':closeModal();break;
@@ -728,6 +938,36 @@ document.addEventListener('click',function(ev_){
     case 'newmem':modalMem();break;
     case 'editmem':if(canMembers())modalMem(id);break;
     case 'newvis':modalVis();break;
+    case 'escopen':ui.escOpen=ui.escOpen===id?0:id;render();break;
+    case 'etipo':ui.eTipo=el.dataset.v;render();break;
+    case 'volunt':
+      var eV=ev(id),sV=slotOf(eV,+el.dataset.s);
+      if(!ui.user.mid){break}
+      if(!escalaAberta(eV)){toast('A escala deste evento abre em '+fdate(abreEm(eV))+'.','bad');break}
+      var errV=addItem(eV,sV,ui.user.mid,'voluntario');
+      if(errV)toast(errV,'bad');else{save();toast('Você está na escala. Obrigado por servir!');render()}
+      break;
+    case 'rmitem':
+      var eR=ev(id),sR=slotOf(eR,+el.dataset.s),mR=+el.dataset.m,itR=sR.itens.find(function(i){return i.m===mR});
+      if(!itR)break;
+      if(!canMembers()&&(mR!==ui.user.mid||itR.origem==='fixo'))break;
+      sR.itens=sR.itens.filter(function(i){return i.m!==mR});
+      if(itR.origem==='fixo'&&sR.ausentes.indexOf(mR)<0)sR.ausentes.push(mR);
+      save();toast(mR===ui.user.mid?'Você saiu da escala.':'Removido da escala.');render();break;
+    case 'assign':if(canMembers())modalAssign(id,+el.dataset.s);break;
+    case 'rmslot':
+      if(!canMembers())break;
+      var eS=ev(id),sS=slotOf(eS,+el.dataset.s);
+      if(sS.pid&&eS.escala.omit.indexOf(sS.pid)<0)eS.escala.omit.push(sS.pid);
+      eS.escala.slots=eS.escala.slots.filter(function(x){return x.id!==sS.id});
+      save();closeModal();toast('Posição removida deste evento.');render();break;
+    case 'addslot':if(canMembers())modalAddSlot(id);break;
+    case 'restslot':if(canMembers()){ev(id).escala.omit=[];save();toast('Posições restauradas.');render()}break;
+    case 'newpos':modalPos();break;
+    case 'editpos':modalPos(id);break;
+    case 'delpos':
+      S.posicoes=S.posicoes.filter(function(x){return x.id!==id});
+      save();closeModal();toast('Posição excluída.');render();break;
     case 'newfunc':modalFunc();break;
     case 'editfunc':modalFunc(id);break;
     case 'delask':var db=$('#delbox');if(db)db.hidden=false;break;
@@ -757,7 +997,7 @@ document.addEventListener('click',function(ev_){
 $('#modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'&&!$('#modal').hidden)closeModal();
-  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.row.click')&&e.target.dataset.a){e.preventDefault();e.target.click()}
+  if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.row.click,.evhead')&&e.target.dataset.a){e.preventDefault();e.target.click()}
 });
 document.addEventListener('input',function(e){
   var t=e.target;
@@ -799,6 +1039,26 @@ document.addEventListener('submit',function(e){
       ui.user={role:'fiel',mid:nm.id};ui.page='inicio';toast('Cadastro enviado. A secretaria vai confirmar.');render();break;
     case 'membro':
       var cur=id?mem(id):null,m2=readMember(fd,cur);if(!cur)S.members.push(m2);save();closeModal();toast('Membro salvo.');render();break;
+    case 'assign':
+      var eA=ev(id),sA=slotOf(eA,+f.dataset.s),midA=+fd.get('mid');
+      if(!midA)return;
+      var errA=addItem(eA,sA,midA,'lider');
+      if(errA){toast(errA,'bad');return}
+      save();closeModal();toast('Cooperador escalado.');render();break;
+    case 'addslot':
+      var eN=ev(id),nmN=String(fd.get('nome')).trim();
+      eN.escala.slots.push({id:nid('sl'),pid:null,nome:nmN,vagas:Math.max(1,Math.min(20,parseInt(fd.get('vagas'),10)||1)),itens:[],ausentes:[],custom:true});
+      save();closeModal();toast('Posição adicionada ao evento.');render();break;
+    case 'posicao':
+      var nmP=String(fd.get('nome')).trim(),tps=fd.getAll('tp');
+      if(!tps.length){toast('Marque ao menos um tipo de evento.','bad');return}
+      if(S.posicoes.some(function(x){return x.id!==id&&x.nome.toLowerCase()===nmP.toLowerCase()})){toast('Já existe uma posição com esse nome.','bad');return}
+      var px=id?S.posicoes.find(function(x){return x.id===id}):{id:nid('pos')};
+      px.nome=nmP;px.tipos=tps;px.vagas=Math.max(1,Math.min(20,parseInt(fd.get('vagas'),10)||1));
+      px.recorrente=fd.get('rec')==='on';
+      px.titulares=px.recorrente?fd.getAll('ti').map(Number):[];
+      if(!id)S.posicoes.push(px);
+      save();closeModal();toast('Posição salva.');render();break;
     case 'funcao':
       var nomeF=String(fd.get('nome')).trim();
       if(S.funcoes.some(function(x){return x.id!==id&&x.nome.toLowerCase()===nomeF.toLowerCase()})){toast('Já existe uma função com esse nome.','bad');return}

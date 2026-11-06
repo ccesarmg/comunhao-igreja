@@ -210,6 +210,10 @@ textarea{resize:vertical;min-height:64px}
 .pp.vazio{color:var(--muted);font-style:italic;padding:3px 0}
 .slot-a{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;align-items:center}
 .evtools{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.cursos{display:grid;gap:6px}
+.cursorow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.cursorow .chk{flex:1 1 220px}
+.cursorow input[type=date]{width:150px;flex:none}
 @media (max-width:860px){
   .app{grid-template-columns:minmax(0,1fr);gap:14px}
   .side{position:static;padding:12px;gap:10px}
@@ -244,11 +248,11 @@ var FORMAS=['PIX','Dinheiro','Cartão','Transferência','Envelope'];
 var STAFF={secretaria:'Helena Duarte',tesouraria:'Wagner Pinheiro',pastor:'Pastor Josué dos Santos'};
 var ROLES={
   fiel:{nome:'Membro',nav:['inicio','meu','agenda','escala','presenca','aniversarios']},
-  secretaria:{nome:'Secretaria',nav:['dashboard','membros','funcoes','visitantes','agenda','escala','posicoes','presenca','aniversarios']},
+  secretaria:{nome:'Secretaria',nav:['dashboard','membros','funcoes','cursos','visitantes','agenda','escala','posicoes','presenca','aniversarios']},
   tesouraria:{nome:'Tesouraria',nav:['financeiro','patrimonio','dashboard','agenda']},
-  pastor:{nome:'Pastor e liderança',nav:['dashboard','membros','funcoes','visitantes','agenda','escala','posicoes','presenca','aniversarios','financeiro','patrimonio']}
+  pastor:{nome:'Pastor e liderança',nav:['dashboard','membros','funcoes','cursos','visitantes','agenda','escala','posicoes','presenca','aniversarios','financeiro','patrimonio']}
 };
-var NAV={inicio:'Início',meu:'Meu cadastro',agenda:'Programação',presenca:'Presença',aniversarios:'Aniversariantes',dashboard:'Painel',membros:'Membros',funcoes:'Funções',escala:'Escala',posicoes:'Posições da escala',visitantes:'Visitantes',financeiro:'Financeiro',patrimonio:'Patrimônio'};
+var NAV={inicio:'Início',meu:'Meu cadastro',agenda:'Programação',presenca:'Presença',aniversarios:'Aniversariantes',dashboard:'Painel',membros:'Membros',funcoes:'Funções',cursos:'Cursos',escala:'Escala',posicoes:'Posições da escala',visitantes:'Visitantes',financeiro:'Financeiro',patrimonio:'Patrimônio'};
 
 /* ---------- utilidades ---------- */
 function $(s){return document.querySelector(s)}
@@ -414,9 +418,38 @@ function seedPosicoes(){
   ];
   return L.map(function(a,i){return {id:i+1,nome:a[0],tipos:a[1].slice(),vagas:a[2],recorrente:a[3],titulares:a[4].slice()}});
 }
+function seedCursos(){
+  var L=[
+    ['Curso Preparatório de Obreiros','CPO',60,'Formação para quem será consagrado ao diaconato e ao auxílio na obra'],
+    ['Capacitação de Professores da EBD','CPEBD',30,'Didática e conteúdo para professores da Escola Bíblica Dominical'],
+    ['Teologia Básica','TEOB',80,'Panorama bíblico e doutrinas fundamentais'],
+    ['Aconselhamento Cristão','ACON',40,'Escuta e orientação pastoral'],
+    ['Liderança Cristã','LIDER',40,'Princípios de liderança no ministério'],
+    ['Evangelismo e Missões','EVAN',30,'Evangelização pessoal e projetos missionários'],
+    ['Louvor e Adoração','LOUV',30,'Teoria musical aplicada e ministração no louvor'],
+    ['Mídia e Transmissão','MIDI',20,'Operação de áudio, vídeo e transmissão ao vivo']
+  ];
+  return L.map(function(a,i){return {id:i+1,nome:a[0],sigla:a[1],carga:a[2],descricao:a[3]}});
+}
 function migrate(){
   if(!S.funcoes){S.funcoes=seedFuncoes(S.members);S.ids.fn=S.funcoes.length}
   S.members.forEach(function(m){if(!m.funcoes)m.funcoes=[]});
+  S.funcoes.forEach(function(f){if(!f.requisitos)f.requisitos=[]});
+  S.members.forEach(function(m){if(!m.cursos)m.cursos=[]});
+  if(!S.cursos){
+    S.cursos=seedCursos();S.ids.cur=S.cursos.length;
+    var rq={'Diácono':['CPO'],'Professor da EBD':['CPEBD'],'Professor infantil':['CPEBD']};
+    S.funcoes.forEach(function(f){f.requisitos=(rq[f.nome]||[]).map(function(sg){return S.cursos.find(function(c){return c.sigla===sg}).id})});
+    var ex={2:['LOUV','MIDI'],12:['LOUV'],8:['MIDI'],4:['TEOB','LIDER'],6:['TEOB'],14:['TEOB','ACON','LIDER'],9:['TEOB'],1:['ACON'],3:['LIDER','EVAN']};
+    Object.keys(ex).forEach(function(k,i){
+      var m=mem(+k);if(!m)return;
+      ex[k].forEach(function(sg,j){var c=S.cursos.find(function(x){return x.sigla===sg});if(c&&!temCurso(m,c.id))m.cursos.push({c:c.id,data:(2019+((i+j)%7))+'-'+pad(1+((i*5+j*3)%12))+'-'+pad(1+((i*7+j*4)%27))})});
+    });
+    S.funcoes.forEach(function(f){S.members.forEach(function(m){
+      if((m.funcoes||[]).indexOf(f.id)<0)return;
+      f.requisitos.forEach(function(cid){if(!temCurso(m,cid))m.cursos.push({c:cid,data:'2022-'+pad(1+(m.id*5)%12)+'-'+pad(1+(m.id*3)%27)})});
+    })});
+  }
   if(!S.posicoes){
     S.events.forEach(function(e){var d=D(e.data);if(e.tipo==='Culto'&&e.titulo==='Culto de Celebração'&&d.getDay()===0&&d.getDate()<=7){e.tipo='Santa Ceia';e.titulo='Culto de Santa Ceia'}});
     S.posicoes=seedPosicoes();S.ids.pos=S.posicoes.length;S.ids.sl=0;
@@ -497,8 +530,33 @@ function me(){return ui.user&&ui.user.mid?S.members.find(function(m){return m.id
 function userName(){return ui.user.role==='fiel'?me().nome:STAFF[ui.user.role]}
 function ev(id){return S.events.find(function(e){return e.id===id})}
 function fnc(id){return S.funcoes.find(function(f){return f.id===id})}
-function isCoop(m){return (m.funcoes||[]).some(function(id){var f=fnc(id);return f&&f.cooperador})}
-function fnChips(m){return (m.funcoes||[]).map(function(id){var f=fnc(id);return f?chip(f.nome,f.cooperador?'acc':''):''}).join('')}
+function cursoById(id){return S.cursos.find(function(c){return c.id===id})}
+function cursoNome(id){var c=cursoById(id);return c?c.nome:''}
+function cursoSigla(id){var c=cursoById(id);return c?(c.sigla||c.nome):''}
+function temCurso(m,cid){return (m.cursos||[]).some(function(r){return r.c===cid})}
+function faltam(m,f){return (f.requisitos||[]).filter(function(cid){return !temCurso(m,cid)})}
+function fnOk(m,f){return faltam(m,f).length===0}
+function reqPara(cid){return S.funcoes.filter(function(f){return (f.requisitos||[]).indexOf(cid)>=0})}
+function pendCount(){var n=0;S.members.forEach(function(m){(m.funcoes||[]).forEach(function(id){var f=fnc(id);if(f&&faltam(m,f).length)n++})});return n}
+function isCoop(m){return (m.funcoes||[]).some(function(id){var f=fnc(id);return f&&f.cooperador&&fnOk(m,f)})}
+function reqError(fd,cur){
+  if(!fd.has('hasfn'))return '';
+  var cs=fd.has('hascs')?fd.getAll('cs').map(Number):((cur&&cur.cursos)||[]).map(function(r){return r.c});
+  var had=(cur&&cur.funcoes)||[];
+  var bad=fd.getAll('fn').map(Number).filter(function(id){return had.indexOf(id)<0}).map(fnc).filter(function(f){return f&&(f.requisitos||[]).some(function(c){return cs.indexOf(c)<0})});
+  if(!bad.length)return '';
+  var miss=bad[0].requisitos.filter(function(c){return cs.indexOf(c)<0}).map(cursoSigla);
+  return bad[0].nome+' exige o curso '+miss.join(', ')+'.';
+}
+function refreshFnLock(f){
+  var cs=[].slice.call(f.querySelectorAll('input[name="cs"]:checked')).map(function(x){return +x.value});
+  [].forEach.call(f.querySelectorAll('input[name="fn"]'),function(inp){
+    var req=(inp.dataset.req||'').split(',').filter(Boolean).map(Number);
+    var ok=req.every(function(c){return cs.indexOf(c)>=0});
+    if(ok){inp.disabled=false}else{inp.checked=false;inp.disabled=true}
+  });
+}
+function fnChips(m){return (m.funcoes||[]).map(function(id){var f=fnc(id);if(!f)return '';return fnOk(m,f)?chip(f.nome,f.cooperador?'acc':''):chip(f.nome+' · falta curso','warn')}).join('')}
 function fnMatch(m){if(!ui.fFuncao)return true;if(ui.fFuncao==='coop')return isCoop(m);return (m.funcoes||[]).indexOf(+ui.fFuncao)>=0}
 function fnOptions(){return '<option value="">Todas as funções</option><option value="coop"'+(ui.fFuncao==='coop'?' selected':'')+'>Somente cooperadores</option>'+S.funcoes.map(function(f){return '<option value="'+f.id+'"'+(String(ui.fFuncao)===String(f.id)?' selected':'')+'>'+esc(f.nome)+'</option>'}).join('')}
 function mem(id){return S.members.find(function(m){return m.id===id})}
@@ -565,12 +623,27 @@ function memberForm(m,own){
   '<div class="f wide"><span>Endereço</span><input name="endereco" value="'+esc(m.endereco)+'"></div>'+
   sel('Estado civil','civil',CIVIS,m.civil)+fld('Data do batismo','batismo',m.batismo,'type="date"')+
   sel('Ministério','ministerio',['']. concat(MINISTERIOS),m.ministerio,'Nenhum')+
-  (staff?sel('Situação','status',['Ativo','Inativo','Pendente'],m.status):'')+'</div>'+funcBlock(m,staff,own);
+  (staff?sel('Situação','status',['Ativo','Inativo','Pendente'],m.status):'')+'</div>'+cursoBlock(m,staff,own)+funcBlock(m,staff,own);
+}
+function cursoBlock(m,staff,own){
+  if(staff){
+    if(!S.cursos.length)return '';
+    return '<fieldset class="fset"><legend>Cursos concluídos (informe a data de conclusão)</legend><input type="hidden" name="hascs" value="1"><div class="cursos">'+
+      S.cursos.map(function(c){
+        var r=(m.cursos||[]).find(function(x){return x.c===c.id});
+        return '<div class="cursorow"><label class="chk"><input type="checkbox" name="cs" value="'+c.id+'"'+(r?' checked':'')+'><span>'+esc(c.nome)+(reqPara(c.id).length?' '+chip('Obrigatório','acc'):'')+'</span></label><input type="date" name="cd_'+c.id+'" value="'+(r?r.data:'')+'" aria-label="Data de conclusão de '+esc(c.nome)+'"></div>';
+      }).join('')+'</div></fieldset>';
+  }
+  if(own&&m.cursos&&m.cursos.length)return '<div class="f"><span>Meus cursos</span><div class="chips">'+m.cursos.map(function(r){var c=cursoById(r.c);return c?chip((c.sigla||c.nome)+' · '+r.data.slice(0,4),'teal'):''}).join('')+'</div></div>';
+  return '';
 }
 function funcBlock(m,staff,own){
   if(staff){
     return '<fieldset class="fset"><legend>Funções (marque as que este membro exerce)</legend><input type="hidden" name="hasfn" value="1"><div class="checks">'+
-      S.funcoes.map(function(f){return '<label class="chk"><input type="checkbox" name="fn" value="'+f.id+'"'+((m.funcoes||[]).indexOf(f.id)>=0?' checked':'')+'><span>'+esc(f.nome)+(f.cooperador?' '+chip('Cooperador','acc'):'')+'</span></label>'}).join('')+'</div></fieldset>';
+      S.funcoes.map(function(f){
+        var had=(m.funcoes||[]).indexOf(f.id)>=0,lack=faltam(m,f),req=f.requisitos||[];
+        return '<label class="chk"><input type="checkbox" name="fn" value="'+f.id+'" data-req="'+req.join(',')+'"'+(had?' checked':'')+((lack.length&&!had)?' disabled':'')+'><span>'+esc(f.nome)+(f.cooperador?' '+chip('Cooperador','acc'):'')+(req.length?'<br><span class="small muted">Exige '+req.map(cursoSigla).map(esc).join(', ')+'</span>':'')+(had&&lack.length?'<br>'+chip('Falta curso','warn'):'')+'</span></label>';
+      }).join('')+'</div></fieldset>';
   }
   if(own&&m.funcoes&&m.funcoes.length)return '<div class="f"><span>Minhas funções na igreja</span><div class="chips">'+fnChips(m)+'</div></div>';
   return '';
@@ -658,12 +731,12 @@ function pFuncoes(){
   var rows=S.funcoes.slice().sort(function(a,b){return (b.cooperador-a.cooperador)||a.nome.localeCompare(b.nome,'pt-BR')}).map(function(f){
     var v=S.members.filter(function(m){return (m.funcoes||[]).indexOf(f.id)>=0});
     var nomes=v.slice(0,3).map(function(m){return esc(m.nome.split(' ')[0])}).join(', ')+(v.length>3?' e mais '+(v.length-3):'');
-    return '<tr><td><b>'+esc(f.nome)+'</b><span class="sub">'+esc(f.descricao||'')+'</span></td><td>'+(f.cooperador?chip('Cooperador','acc'):chip('Membro'))+'</td><td><b class="num">'+v.length+'</b><span class="sub">'+(nomes||'Ninguém vinculado')+'</span></td><td class="ta-r"><button class="btn sm" data-a="editfunc" data-id="'+f.id+'">Editar e vincular</button></td></tr>';
+    return '<tr><td><b>'+esc(f.nome)+'</b><span class="sub">'+esc(f.descricao||'')+'</span></td><td>'+(f.cooperador?chip('Cooperador','acc'):chip('Membro'))+'</td><td>'+((f.requisitos||[]).length?'<div class="chips">'+f.requisitos.map(function(c){return chip(cursoSigla(c),'acc')}).join('')+'</div>':'<span class="muted small">Nenhum</span>')+'</td><td><b class="num">'+v.length+'</b><span class="sub">'+(nomes||'Ninguém vinculado')+(v.filter(function(x){return !fnOk(x,f)}).length?' · '+v.filter(function(x){return !fnOk(x,f)}).length+' sem o curso':'')+'</span></td><td class="ta-r"><button class="btn sm" data-a="editfunc" data-id="'+f.id+'">Editar e vincular</button></td></tr>';
   }).join('');
   return head('Funções','Defina as funções da igreja, quais são de cooperadores e quem as exerce.','<button class="btn primary" data-a="newfunc">Nova função</button>')+
   '<div class="kpis"><div class="kpi"><small>Funções cadastradas</small><b>'+S.funcoes.length+'</b><span>'+S.funcoes.filter(function(f){return f.cooperador}).length+' de cooperadores</span></div><div class="kpi"><small>Cooperadores ativos</small><b>'+coops.length+'</b><span>membros com função de cooperador</span></div></div>'+
-  '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>Função</th><th>Tipo</th><th>Vinculados</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="4" class="empty">Nenhuma função cadastrada.</td></tr>')+'</tbody></table></div></section>'+
-  '<section class="card"><div class="card-head"><h3>Cooperadores</h3><span class="muted small">Quem tem ao menos uma função de cooperador</span></div><div class="list">'+(coops.length?coops.sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')}).map(function(m){return '<div class="row">'+ava(m,36)+'<div class="grow"><b>'+esc(m.nome)+'</b><div class="chips" style="margin-top:4px">'+fnChips(m)+'</div></div></div>'}).join(''):'<p class="empty">Nenhum cooperador definido ainda.</p>')+'</div></section>';
+  '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>Função</th><th>Tipo</th><th>Curso exigido</th><th>Vinculados</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="empty">Nenhuma função cadastrada.</td></tr>')+'</tbody></table></div></section>'+
+  '<section class="card"><div class="card-head"><h3>Cooperadores</h3><span class="muted small">Quem tem ao menos uma função de cooperador</span></div><div class="list">'+(coops.length?coops.sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')}).map(function(m){return '<div class="row">'+ava(m,36)+'<div class="grow"><b>'+esc(m.nome)+'</b><div class="chips" style="margin-top:4px">'+fnChips(m)+'</div></div></div>'}).join(''):'<p class="empty">Nenhum cooperador definido ainda.</p>')+'</div></section>'+pendenciasCard();
 }
 
 /* escala */
@@ -721,7 +794,7 @@ function pEscala(){
   if(!list.some(function(e){return e.id===ui.escOpen}))ui.escOpen=list.length?list[0].id:0;
   var chips=['Todos'].concat(TIPOS).map(function(x){var v=x==='Todos'?'':x;return '<button class="chipbtn" aria-pressed="'+(ui.eTipo===v)+'" data-a="etipo" data-v="'+v+'">'+x+'</button>'}).join('');
   var nota='';
-  if(m&&!coop)nota='<p class="note">Somente cooperadores participam da escala. Se você quer servir, fale com a secretaria para receber uma função de cooperador.</p>';
+  if(m&&!coop)nota='<p class="note">Somente cooperadores participam da escala. Se você quer servir, fale com a secretaria para receber uma função de cooperador. Algumas funções exigem a conclusão de um curso.</p>';
   else if(coop)nota='<p class="note" style="background:var(--olive-soft);color:var(--olive)">Abra um evento e toque em Quero servir na posição que você pode ocupar. A escala abre 30 dias antes de cada evento.</p>';
   return head('Escala','Quem serve em cada culto, ensaio e evento. Apenas cooperadores entram na escala.')+nota+
     '<div class="chips">'+chips+'</div>'+
@@ -735,6 +808,27 @@ function pPosicoes(){
   return head('Posições da escala','Defina as posições de cada tipo de evento e quais são recorrentes.','<button class="btn primary" data-a="newpos">Nova posição</button>')+
     '<p class="note" style="background:var(--olive-soft);color:var(--olive)">Posição recorrente: os titulares entram sozinhos na escala de todos os próximos eventos daquele tipo. Você ainda pode tirar alguém de um evento específico. As demais posições são preenchidas por voluntários ou pela liderança em cada evento.</p>'+
     '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>Posição</th><th>Eventos</th><th>Vagas</th><th>Recorrência</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" class="empty">Nenhuma posição cadastrada.</td></tr>')+'</tbody></table></div></section>';
+}
+
+/* cursos */
+function pendenciasCard(){
+  var rows=[];
+  S.members.forEach(function(m){(m.funcoes||[]).forEach(function(id){var f=fnc(id);if(!f)return;var lack=faltam(m,f);if(lack.length)rows.push({m:m,f:f,lack:lack})})});
+  if(!rows.length)return '';
+  return '<section class="card"><div class="card-head"><h3>Pendências de curso</h3><span class="muted small">Enquanto o curso não for concluído, a função não vale e a pessoa não entra na escala.</span></div><div class="list">'+
+    rows.map(function(x){return '<div class="row">'+ava(x.m,34)+'<div class="grow"><b>'+esc(x.m.nome)+'</b><span>'+esc(x.f.nome)+' exige '+x.lack.map(function(c){return esc(cursoNome(c))}).join(', ')+'</span></div><div class="end">'+chip('Pendente','warn')+'</div></div>'}).join('')+'</div></section>';
+}
+function pCursos(){
+  var obrig=S.cursos.filter(function(c){return reqPara(c.id).length}).length;
+  var rows=S.cursos.map(function(c){
+    var para=reqPara(c.id),n=S.members.filter(function(m){return temCurso(m,c.id)}).length;
+    return '<tr><td><b>'+esc(c.nome)+'</b><span class="sub">'+esc(c.descricao||'')+'</span></td><td>'+esc(c.sigla||'—')+'</td><td class="num">'+(c.carga?c.carga+' h':'—')+'</td><td>'+(para.length?chip('Obrigatório','acc')+'<span class="sub">Para: '+para.map(function(f){return esc(f.nome)}).join(', ')+'</span>':chip('Especialização'))+'</td><td><b class="num">'+n+'</b></td><td class="ta-r"><button class="btn sm" data-a="editcurso" data-id="'+c.id+'">Editar</button></td></tr>';
+  }).join('');
+  var pend=pendCount();
+  return head('Cursos','Cursos da igreja, quais funções os exigem e quem já concluiu.','<button class="btn primary" data-a="newcurso">Novo curso</button>')+
+    '<div class="kpis"><div class="kpi"><small>Cursos cadastrados</small><b>'+S.cursos.length+'</b></div><div class="kpi"><small>Obrigatórios para alguma função</small><b>'+obrig+'</b><span>'+(S.cursos.length-obrig)+' de especialização</span></div><div class="kpi"><small>Pendências de curso</small><b style="color:'+(pend?'var(--warn)':'var(--ok)')+'">'+pend+'</b><span>'+(pend?'veja em Funções':'ninguém pendente')+'</span></div></div>'+
+    '<p class="note" style="background:var(--olive-soft);color:var(--olive)">Curso obrigatório: só quem o concluiu pode ter a função que o exige. Curso sem função vinculada é de especialização e fica aberto a todos.</p>'+
+    '<section class="card"><div class="tblwrap"><table class="tbl"><thead><tr><th>Curso</th><th>Sigla</th><th>Carga</th><th>Tipo</th><th>Concluintes</th><th></th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="empty">Nenhum curso cadastrado.</td></tr>')+'</tbody></table></div></section>';
 }
 
 /* visitantes */
@@ -833,7 +927,7 @@ function patList(){
   return l.map(function(i){return '<div class="row'+(canFinEdit()?' click" tabindex="0" role="button" data-a="edititem" data-id="'+i.id+'"':'"')+'><div class="grow"><b>'+esc(i.item)+'</b><span>'+esc(i.codigo)+' · '+esc(i.cat)+' · '+esc(i.local)+' · '+i.qtd+' un.</span></div><div class="end"><span class="amount">'+brl(i.qtd*i.valor)+'</span>'+chip(i.estado,i.estado==='Bom'?'ok':i.estado==='Regular'?'warn':i.estado==='Ruim'?'bad':'')+'</div></div>'}).join('');
 }
 
-var PAGES={escala:pEscala,posicoes:pPosicoes,inicio:pInicio,meu:pMeu,agenda:pAgenda,presenca:pPresenca,aniversarios:pAniversarios,dashboard:pDashboard,membros:pMembros,funcoes:pFuncoes,visitantes:pVisitantes,financeiro:pFinanceiro,patrimonio:pPatrimonio};
+var PAGES={cursos:pCursos,escala:pEscala,posicoes:pPosicoes,inicio:pInicio,meu:pMeu,agenda:pAgenda,presenca:pPresenca,aniversarios:pAniversarios,dashboard:pDashboard,membros:pMembros,funcoes:pFuncoes,visitantes:pVisitantes,financeiro:pFinanceiro,patrimonio:pPatrimonio};
 var LISTS={agenda:function(){return agendaList()},membros:function(){return membrosList()},aniversarios:function(){return annList()},financeiro:function(){return finList()},patrimonio:function(){return patList()}};
 
 /* ---------- modais ---------- */
@@ -856,7 +950,8 @@ function modalFunc(id){
     fld('Nome da função','nome',f.nome,'required placeholder="Ex.: Porteiro"')+
     '<div class="f wide"><span>Descrição</span><input name="descricao" value="'+esc(f.descricao||'')+'" placeholder="O que essa pessoa faz na igreja"></div>'+
     '<label class="f wide chk"><input type="checkbox" name="coop"'+(f.cooperador?' checked':'')+'><span><b>É uma função de cooperador</b><br><span class="muted small">Quem tiver esta função passa a aparecer na lista de cooperadores.</span></span></label></div>'+
-    '<fieldset class="fset"><legend>Membros com esta função</legend><div class="checks">'+mems.map(function(m){return '<label class="chk"><input type="checkbox" name="mv" value="'+m.id+'"'+((m.funcoes||[]).indexOf(f.id)>=0&&id?' checked':'')+'><span>'+esc(m.nome)+'</span></label>'}).join('')+'</div></fieldset>'+
+    '<fieldset class="fset"><legend>Cursos obrigatórios para esta função</legend>'+(S.cursos.length?'<div class="checks">'+S.cursos.map(function(c){return '<label class="chk"><input type="checkbox" name="req" value="'+c.id+'"'+((f.requisitos||[]).indexOf(c.id)>=0?' checked':'')+'><span>'+esc(c.nome)+'</span></label>'}).join('')+'</div>':'<p class="muted small">Nenhum curso cadastrado ainda.</p>')+'<p class="small muted" style="margin-top:8px">Quem não tiver o curso não pode receber a função e não conta como cooperador.</p></fieldset>'+
+    '<fieldset class="fset"><legend>Membros com esta função</legend><div class="checks">'+mems.map(function(m){return '<label class="chk"><input type="checkbox" name="mv" value="'+m.id+'"'+((m.funcoes||[]).indexOf(f.id)>=0&&id?' checked':'')+'><span>'+esc(m.nome)+(id&&faltam(m,f).length?' '+chip('sem curso','warn'):'')+'</span></label>'}).join('')+'</div></fieldset>'+
     (id?'<div id="delbox" class="note" hidden><p>Excluir remove esta função de '+S.members.filter(function(m){return (m.funcoes||[]).indexOf(id)>=0}).length+' membro(s). Não dá para desfazer.</p><div class="modal-actions" style="margin-top:8px"><button class="btn sm" type="button" data-a="delfunc" data-id="'+id+'">Confirmar exclusão</button></div></div>':'')+
     actions('Salvar',del)+'</form>');
 }
@@ -883,6 +978,18 @@ function modalPos(id){
     '<label class="chk"><input type="checkbox" name="rec"'+(p.recorrente?' checked':'')+'><span><b>Posição recorrente</b><br><span class="muted small">Os titulares abaixo entram sozinhos na escala de todos os próximos eventos desses tipos.</span></span></label>'+
     '<fieldset class="fset"><legend>Titulares (só vale se for recorrente)</legend>'+(coops.length?'<div class="checks">'+coops.map(function(x){return '<label class="chk"><input type="checkbox" name="ti" value="'+x.id+'"'+(p.titulares.indexOf(x.id)>=0?' checked':'')+'><span>'+esc(x.nome)+'</span></label>'}).join('')+'</div>':'<p class="muted small">Nenhum cooperador ativo. Vincule funções de cooperador aos membros primeiro.</p>')+'</fieldset>'+
     (id?'<div id="delbox" class="note" hidden><p>Excluir remove esta posição da escala dos próximos eventos. Eventos passados não mudam.</p><div class="modal-actions" style="margin-top:8px"><button class="btn sm" type="button" data-a="delpos" data-id="'+id+'">Confirmar exclusão</button></div></div>':'')+
+    actions('Salvar',del)+'</form>');
+}
+function modalCurso(id){
+  var c=id?cursoById(id):{nome:'',sigla:'',carga:'',descricao:''};
+  var mems=S.members.slice().sort(function(a,b){return a.nome.localeCompare(b.nome,'pt-BR')});
+  var del=id?'<button class="btn" type="button" data-a="delask">Excluir curso</button>':'';
+  openModal('<h2>'+(id?'Editar curso':'Novo curso')+'</h2><form data-f="curso" data-id="'+(id||'')+'" style="display:flex;flex-direction:column;gap:16px"><div class="formgrid">'+
+    fld('Nome do curso','nome',c.nome,'required placeholder="Ex.: Curso Preparatório de Obreiros"')+fld('Sigla','sigla',c.sigla||'','maxlength="8" placeholder="CPO"')+fld('Carga horária (horas)','carga',c.carga||'','type="number" min="0"')+
+    '<div class="f wide"><span>Descrição</span><input name="descricao" value="'+esc(c.descricao||'')+'"></div></div>'+
+    '<fieldset class="fset"><legend>Obrigatório para as funções</legend>'+(S.funcoes.length?'<div class="checks">'+S.funcoes.map(function(f){return '<label class="chk"><input type="checkbox" name="para" value="'+f.id+'"'+(id&&(f.requisitos||[]).indexOf(c.id)>=0?' checked':'')+'><span>'+esc(f.nome)+'</span></label>'}).join('')+'</div>':'<p class="muted small">Nenhuma função cadastrada.</p>')+'<p class="small muted" style="margin-top:8px">Sem nenhuma função marcada, o curso é de especialização e fica aberto a qualquer membro.</p></fieldset>'+
+    '<fieldset class="fset"><legend>Quem concluiu</legend><div class="checks">'+mems.map(function(m){return '<label class="chk"><input type="checkbox" name="cm" value="'+m.id+'"'+(id&&temCurso(m,c.id)?' checked':'')+'><span>'+esc(m.nome)+'</span></label>'}).join('')+'</div><div class="formgrid" style="margin-top:10px">'+fld('Data de conclusão dos novos marcados','data',todayISO(),'type="date"')+'</div></fieldset>'+
+    (id?'<div id="delbox" class="note" hidden><p>Excluir remove o curso, a exigência nas funções e o registro de quem concluiu. Não dá para desfazer.</p><div class="modal-actions" style="margin-top:8px"><button class="btn sm" type="button" data-a="delcurso" data-id="'+id+'">Confirmar exclusão</button></div></div>':'')+
     actions('Salvar',del)+'</form>');
 }
 function modalVis(){
@@ -980,6 +1087,13 @@ document.addEventListener('click',function(ev_){
     case 'delpos':
       S.posicoes=S.posicoes.filter(function(x){return x.id!==id});
       save();closeModal();toast('Posição excluída.');render();break;
+    case 'newcurso':modalCurso();break;
+    case 'editcurso':modalCurso(id);break;
+    case 'delcurso':
+      S.cursos=S.cursos.filter(function(x){return x.id!==id});
+      S.funcoes.forEach(function(f){f.requisitos=(f.requisitos||[]).filter(function(x){return x!==id})});
+      S.members.forEach(function(m){m.cursos=(m.cursos||[]).filter(function(r){return r.c!==id})});
+      save();closeModal();toast('Curso excluído.');render();break;
     case 'newfunc':modalFunc();break;
     case 'editfunc':modalFunc(id);break;
     case 'delask':var db=$('#delbox');if(db)db.hidden=false;break;
@@ -1017,6 +1131,7 @@ document.addEventListener('input',function(e){
 });
 document.addEventListener('change',function(e){
   var t=e.target;
+  if(t.name==='cs'&&t.closest('form')){refreshFnLock(t.closest('form'));return}
   if(t.dataset&&t.dataset.photo){
     var f=t.files&&t.files[0];if(!f)return;
     readPhoto(f,function(url){ui.tmpFoto=url;$('#fotoPrev').innerHTML='<img class="ava" style="width:72px;height:72px" src="'+url+'" alt="Nova foto">'});return;
@@ -1039,6 +1154,8 @@ function readMember(fd,base){
   if(ui.tmpFoto!==undefined)m.foto=ui.tmpFoto;
   if(fd.has('hasfn'))m.funcoes=fd.getAll('fn').map(Number);
   if(!m.funcoes)m.funcoes=[];
+  if(fd.has('hascs')){var old=m.cursos||[];m.cursos=fd.getAll('cs').map(Number).map(function(cid){var o=old.find(function(x){return x.c===cid});return {c:cid,data:fd.get('cd_'+cid)||(o&&o.data)||todayISO()}})}
+  if(!m.cursos)m.cursos=[];
   return m;
 }
 document.addEventListener('submit',function(e){
@@ -1050,7 +1167,9 @@ document.addEventListener('submit',function(e){
       var nm=readMember(fd,null);nm.status='Pendente';S.members.push(nm);save();closeModal();
       ui.user={role:'fiel',mid:nm.id};ui.page='inicio';toast('Cadastro enviado. A secretaria vai confirmar.');render();break;
     case 'membro':
-      var cur=id?mem(id):null,m2=readMember(fd,cur);if(!cur)S.members.push(m2);save();closeModal();toast('Membro salvo.');render();break;
+      var cur=id?mem(id):null;
+      var erM=reqError(fd,cur);if(erM){toast(erM,'bad');return}
+      var m2=readMember(fd,cur);if(!cur)S.members.push(m2);save();closeModal();toast('Membro salvo.');render();break;
     case 'assign':
       var eA=ev(id),sA=slotOf(eA,+f.dataset.s),midA=+fd.get('mid');
       if(!midA)return;
@@ -1071,11 +1190,41 @@ document.addEventListener('submit',function(e){
       px.titulares=px.recorrente?fd.getAll('ti').map(Number):[];
       if(!id)S.posicoes.push(px);
       save();closeModal();toast('Posição salva.');render();break;
+    case 'curso':
+      var nmC=String(fd.get('nome')).trim(),sgC=String(fd.get('sigla')||'').trim().toUpperCase();
+      if(S.cursos.some(function(x){return x.id!==id&&(x.nome.toLowerCase()===nmC.toLowerCase()||(sgC&&x.sigla===sgC))})){toast('Já existe um curso com esse nome ou sigla.','bad');return}
+      var cx=id?cursoById(id):{id:nid('cur')};
+      cx.nome=nmC;cx.sigla=sgC;cx.carga=Math.max(0,parseInt(fd.get('carga'),10)||0);cx.descricao=String(fd.get('descricao')||'').trim();
+      if(!id)S.cursos.push(cx);
+      var paraC=fd.getAll('para').map(Number);
+      S.funcoes.forEach(function(f){
+        f.requisitos=f.requisitos||[];
+        var has=f.requisitos.indexOf(cx.id)>=0,wt=paraC.indexOf(f.id)>=0;
+        if(wt&&!has)f.requisitos.push(cx.id);
+        if(!wt&&has)f.requisitos=f.requisitos.filter(function(x){return x!==cx.id});
+      });
+      var cmC=fd.getAll('cm').map(Number),dtC=fd.get('data')||todayISO();
+      S.members.forEach(function(m){
+        m.cursos=m.cursos||[];
+        var r=m.cursos.find(function(x){return x.c===cx.id}),wt=cmC.indexOf(m.id)>=0;
+        if(wt&&!r)m.cursos.push({c:cx.id,data:dtC});
+        if(!wt&&r)m.cursos=m.cursos.filter(function(x){return x.c!==cx.id});
+      });
+      save();closeModal();
+      var pc=pendCount();
+      toast(pc?'Curso salvo. '+pc+' pendência(s) de curso em Funções.':'Curso salvo.');render();break;
     case 'funcao':
       var nomeF=String(fd.get('nome')).trim();
       if(S.funcoes.some(function(x){return x.id!==id&&x.nome.toLowerCase()===nomeF.toLowerCase()})){toast('Já existe uma função com esse nome.','bad');return}
+      var reqF=fd.getAll('req').map(Number),wantV=fd.getAll('mv').map(Number),exF=id?fnc(id):null;
+      for(var qi=0;qi<wantV.length;qi++){
+        var mq=mem(wantV[qi]);if(!mq)continue;
+        if(exF&&(mq.funcoes||[]).indexOf(exF.id)>=0)continue;
+        var lk=reqF.filter(function(c){return !temCurso(mq,c)});
+        if(lk.length){toast(mq.nome.split(' ')[0]+' ainda não concluiu '+lk.map(cursoSigla).join(', ')+', exigido para '+nomeF+'.','bad');return}
+      }
       var fx=id?fnc(id):{id:nid('fn')};
-      fx.nome=nomeF;fx.descricao=String(fd.get('descricao')||'').trim();fx.cooperador=fd.get('coop')==='on';
+      fx.nome=nomeF;fx.descricao=String(fd.get('descricao')||'').trim();fx.cooperador=fd.get('coop')==='on';fx.requisitos=reqF;
       if(!id)S.funcoes.push(fx);
       var want=fd.getAll('mv').map(Number);
       S.members.forEach(function(m){
@@ -1084,7 +1233,7 @@ document.addEventListener('submit',function(e){
         if(wt&&!has)m.funcoes.push(fx.id);
         if(!wt&&has)m.funcoes=m.funcoes.filter(function(x){return x!==fx.id});
       });
-      save();closeModal();toast('Função salva.');render();break;
+      save();closeModal();var pn=S.members.filter(function(x){return (x.funcoes||[]).indexOf(fx.id)>=0&&faltam(x,fx).length}).length;toast(pn?'Função salva. '+pn+' membro(s) ficaram pendentes de curso.':'Função salva.');render();break;
     case 'visitante':
       S.visitors.push({id:nid('v'),nome:fd.get('nome').trim(),tel:fd.get('tel'),data:fd.get('data'),origem:fd.get('origem'),evento:fd.get('evento'),retorno:fd.get('retorno')==='on',obs:''});
       save();closeModal();toast('Visitante registrado.');render();break;
